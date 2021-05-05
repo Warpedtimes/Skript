@@ -1,0 +1,318 @@
+#Coin Flips Script
+#Tested versions: 1.16
+#Skript ver: 2.5.3
+#Addons: skript-gui (https://github.com/APickledWalrus/skript-gui)
+#		 skellet (https://forums.skunity.com/resources/skellett.24/)
+#Requirements: Economy plugin. This skript hooks in using skellet for handling money.
+
+options:
+	mode: "TITLE" #Set this to GUI or TITLE depending on how you want the flipping parts displayed
+	minBet: 1
+	maxBet: 1000000
+
+	#Display of the selected side of the coin. Format as you wish
+	prefix: &6[&eCF&6]
+	tails: &cTails
+	heads: &aHeads
+
+
+#Main Command. Determins the action and then calls the function for it.
+command coinflip [<text>] [<number>] [<text>]:
+	aliases: cf
+	trigger:
+		if arg-1 is "cancel":
+			cfCancel(player)
+
+		else if arg-1 is "top":
+			cfTop(player)
+
+		else if arg-1 is "bet":
+			if arg-3 contains "head" or "tail":
+				cfBet(player,arg 2,arg 3)
+
+		else if arg-1 is not set:
+			cfMenu(player)
+
+		else:
+			message "&8-----{@prefix}&8-----"
+			message "&eCoin Flip Usagae:"
+			message "&eOpen Menu: &a/cf"
+			message "&eNew Coin Flip: &a/cf bet amount heads/tails"
+			message "&eCancel Coin Flip: &a/cf cancel"
+			message "&eCoin Flip Top: &a/cf top"
+			message ""
+			message "&8-----{@prefix}&8-----"
+
+#Functions! These are how the flips will work.
+
+#This one here is for making the main menu gui for the player
+function cfMenu(p: player):
+	create a gui with virtual chest inventory with 4 rows named "              &8&nCoin Flips":
+		if {cf.globaltax} is not set:
+			set {cf.globaltax} to 0
+		wait 3 ticks
+		loop {cf::active::*}:
+			set {_slot} to 10
+			if {_slot} = 18:
+				add 3 to {_slot}
+			set {_p1} to loop-value parsed as an offline player
+			set {_side} to {cf.side.%loop-value%}
+			add {_p1} to {cf.active.players::%{_p}%}
+			make gui slot {_slot} with skull of (loop-value parsed as an offline player) named "&f%loop-value%" with lore "" and "&7■ Side: %sideFormat({cf.side.%loop-value%})%" and "&7■ Bet: &6$%regex({cf.bet.%loop-value%})%" and "" and "&e>> Click to play":
+				set {_p2} to {_p}
+				if {_p2} = {_p1}:
+					if {cf.bet.%{_p}%} <= {_p2}'s balance:
+						if {cf.isActive::%{_p2}%} is false:
+							if {cf.isActive::%{_p1}%} is false:
+								cfGamble({_p1},{_p2},{cf.bet.%{_p}%},{_side})
+								set {cf.isActive::%{_p1}%} to true
+								set {cf.isActive::%{_p2}%} to true
+
+							#Feedback for user. With sound	
+							else:
+								soundNo({_p})
+								message "{@prefix} &c%{_p1}% already has an active coin flip on going!"
+						else:
+							soundNo({_p})
+							message "{@prefix} &cYou already have an active coin flip on going!"
+					else:
+						soundNo({_p})
+						message "{@prefix} &cYou cannot afford this coinflip!"
+				else:
+					soundNo({_p})
+					message "{@prefix} &cYou cannot gamble with yourself!"
+
+		make gui slot 35 with emerald block of power 1 named "&a&lRefresh" with lore "&7Refresh the coin flips menu" with hidden enchants:
+			cfMenu({_p})
+		make gui slot 27 with writable book named "&e&lStats" with lore "&aWins: &f%{cf.wins::%{_p}%}%" and "&cLoses: &f%{cf.loses::%{_p}%}%" and "" and "&7How do you match up? &e/cf top":
+			close {_p}'s inventory
+			cfTop({_p})
+		make gui slot 28 with lectern named "&e&lHelp?" with lore "&7■ To create a new coinflip use &e/cf amount heads/tails" and "&7■ To play someones coin flip simply click their head" and "&7■ Winning will grant you the sum of the bet minus tax (5%%)"
+		make gui slot 29 with gold ingot named "&e&lGambling Tax" with lore "&7Tax Rate: 5%%" and "&7Taxed Total: &6$%regex({cf.globaltax})%"
+		open gui last gui to {_p}
+
+#How the script takes the players request for a new bet and handles it
+
+function cfBet(p: player, bet: number, side: text):
+	loop {cf::active::*}:
+		if loop-value is "%{_p}%":
+			soundNo({_p})
+			message "{@prefix} &cCoin Flip already active! Use /cf cancel" to {_p}
+			stop
+
+	#Making sure the bet is within range defined.
+	if {_bet} > {@maxBet}:
+		message "{@prefix} &cBet cannot be more that &6$%regex({@maxBet})%" to {_p}
+		soundNo({_p})
+		stop
+	else if {_bet} < {@minBet}:
+		message "{@prefix} &cBet cannot be less that &6$%regex({@minBet})%" to {_p}
+		soundNo({_p})
+		stop
+	else if {_bet} > {_p}'s balance:
+		message "{@prefix} &cYou cannot afford this coinflip!" to {_p}
+		soundNo({_p})
+		stop
+	add "%{_p}%" to {cf::active::*}
+	set {cf.bet.%{_p}%} to {_bet}
+	set {cf.side.%{_p}%} to sideFormat({_side})
+	set {cf.activeplayer::%{_p}%} to true
+	play sound "entity.experience_orb.pickup" with volume 0.2 at {_p}
+	message "{@prefix} &aNew Coin Flip Created! &e$%regex({_bet})% &aon %{cf.side.%{_p}%}%" to {_p}
+	remove {_bet} from {_p}'s balance
+	cfMenu({_p})
+
+
+#How the script will handle flips between players. It has 2 modes, either a title mode or a gui mode. I reccommend title
+
+function cfGamble(p1: player, p2: offline player, bet: number, side:text):
+	#Remove the game from the GUI
+	remove "%{_p1}%" from {cf::active::*}
+	#Remove the bet amount from the second player
+	remove {_bet} from {_p2}'s balance
+
+	#Setting the sides to be formatted nicely
+	if {_side} contains "head":
+		set {_side.p2} to "{@tails}"
+		set {_side.p1} to "{@heads}"
+	else:
+		set {_side.p2} to "{@heads}"
+		set {_side.p1} to "{@tails}"
+
+	#Find the winner of the bet
+	set {_chance} to a random integer between 1 and 2
+	if {_chance} = 1:
+		set {_winner} to {_p1}
+		set {_loser} to {_p2}
+		set {_win.side} to {_side.p1}
+	else:
+		set {_loser} to {_p1}
+		set {_winner} to {_p2}
+		set {_win.side} to {_side.p2}
+
+	#Setting some values used in the menus
+	set {_winnings} to ({_bet} * 2) * 0.95
+	set {_betDisplay} to regex({_bet})
+	set {_betDisplayTaxed} to regex({_winnings})
+
+	if {@mode} = "TITLE":
+		close {_p1}'s inventory
+		close {_p2}'s inventory
+
+		set {_number} to a random integer between 10 and 30
+		set {_base} to {_number} / 2
+		loop {_number} times:
+			set {_base} to {_base} - 0.4 
+			set {_time} to round(1 / {_base} * 10 * 1.1 * 1.2) / 10
+
+			play sound "entity.experience_orb.pickup" with volume 0.2 at {_p1} and {_p2}
+			play sound "ui.button.click" with volume 0.1 at {_p1} and {_p2}
+			send title "%{_side.p1}%" with subtitle "%{_p1}%" to {_p1} and {_p2}
+			wait "%{_time}% seconds" parsed as a timespan
+			play sound "entity.experience_orb.pickup" with volume 0.2 at {_p1} and {_p2}
+			play sound "ui.button.click" with volume 0.1 at {_p1} and {_p2}
+
+			send title "%{_side.p2}%" with subtitle "%{_p2}%" to {_p1} and {_p2}
+			wait "%{_time}% seconds" parsed as a timespan
+		send title "%{_win.side}% WINS" with subtitle "&6+ $%{_betDisplayTaxed}%" to {_winner} for 3 seconds
+		send title "%{_win.side}% WINS" with subtitle "&c- $%{_betDisplay}%" to {_loser} for 3 seconds
+
+	else:
+		create a gui with virtual chest inventory with 1 rows named "              &8&nCoin Flips":
+			make gui slot 2 with skull of {_p1} named "&f%{_p1}%" with lore "" and "%{_side.p1}%"
+			make gui slot 6 with skull of {_p2} named "&f%{_p2}%" with lore "" and "%{_side.p2}%"
+
+			make gui slot 4 with green stained glass pane named "{@heads}"
+			open gui last gui to {_p1} and {_p2}
+
+			set {_number} to a random integer between 10 and 30
+			set {_base} to {_number} / 2
+			loop {_number} times:
+				set {_base} to {_base} - 0.4 
+				set {_time} to round(1 / {_base} * 10 * 1.1 * 1.2) / 10
+				play sound "entity.experience_orb.pickup" with volume 0.2 at {_p1} and {_p2}
+				play sound "ui.button.click" with volume 0.1 at {_p1} and {_p2}
+				make gui slot 4 with red stained glass pane named "{@tails}"
+				wait "%{_time}% seconds" parsed as a timespan
+				play sound "entity.experience_orb.pickup" with volume 0.2 at {_p1} and {_p2}
+				play sound "ui.button.click" with volume 0.1 at {_p1} and {_p2}
+				make gui slot 4 with green stained glass pane named "{@heads}"
+				wait "%{_time}% seconds" parsed as a timespan
+
+			if {_win.side} contains "tail":
+				make gui slot 4 with red stained glass pane named "{@tails} Wins!" with lore "&a%{_winner}% won &6$%{_betDisplayTaxed}%"
+			else:
+				make gui slot 4 with green stained glass pane named "{@heads} Wins!" with lore "&a%{_winner}% won &6$%{_betDisplayTaxed}%"
+
+	#Win effects for winner. Also chat feedback
+	play sound "ui.button.click" with volume 0.1 at {_p1} and {_p2}
+	message "{@prefix} &cCoin Flip Lost. - $%{_betDisplay}%" to {_loser}
+	message "{@prefix} &aCoin Flip Won! + $%{_betDisplayTaxed}% &7(5%% Taxed)" to {_winner}
+	play sound "entity.villager.death" with volume 0.2 at {_loser}
+	loop 4 times:
+		play sound "entity.player.levelup" with volume 0.2 at {_winner}
+		wait 15 ticks
+
+	#Paying out the winner
+	add {_winnings} to {_winner}'s balance
+
+	#Increasing global tax collected (dont want op'd players with infinite money to effect this)
+	if {_p1} or {_p2} is not op:
+		add {_winnings}*0.05 to {cf.globaltax}
+
+	#Resetting all the variables. Adding wins and loses to players
+	set {cf.isActive::%{_p1}%} to false
+	set {cf.isActive::%{_p2}%} to false
+	set {cf.activeplayer::%{_p1}%} to false
+	set {cf.activeplayer::%{_p2}%} to false
+	add 1 to {cf.wins::%{_winner}%}
+	add 1 to {cf.loses::%{_loser}%}
+
+#Cancel command
+on disconnect:
+	execute player command "cf cancel"
+
+#Just an incase if the server shuts down
+on join:
+	if {cf.activeplayer::%{_p}%} is true:
+		cfCancel(player)
+
+function cfCancel(p: player):
+	#Check if the player has a coinflip active
+	if {cf.activeplayer::%{_p}%} is false:
+		soundNo({_p})
+		message "{@prefix} &cNo active Coin Flips!" to {_p}
+	else:
+		loop {cf::active::*}:
+			if loop-value is "%{_p}%":
+				add {cf.bet.%{_p}%} to {_p}'s balance
+				play sound "entity.experience_orb.pickup" with volume 0.2 at {_p}
+				message "{@prefix} &aCoin Flip canceled. Refunded &6$%regex({cf.bet.%{_p}%})%" to {_p}
+				delete {cf::active::%loop-index%}
+				set {cf.activeplayer::%{_p}%} to false
+				stop
+
+#Leaderboard Command. Idk how to get this in a gui so you get this instead
+function cfTop(p: player):
+	loop {cf.wins::*}:
+		add 1 to {_size}
+		if {_low.to.high.list::%loop-value%} is not set:
+			set {_low.to.high.list::%loop-value%} to loop-index
+		else:
+			set {_n} to 0
+			loop {_size} times:
+				set {_n} to {_n}+1
+				{_low.to.high.list::%loop-value-1%.%{_n}%} is not set:
+					set {_low.to.high.list::%loop-value-1%.%{_n}%} to loop-index
+					stop loop
+	wait 1 tick
+	set {_n} to size of {_low.to.high.list::*}
+	loop {_low.to.high.list::*}:
+		set {_high.to.low.list::%{_n}%} to loop-value
+		set {_n} to {_n}-1
+	wait 1 tick
+	set {_i} to 0
+
+	message "&8-----{@prefix}&8-----" to {_p}
+	message "&eCoin Flip Leaderboard &7(wins)" to {_p}
+	loop {_high.to.low.list::*}:
+		add 1 to {_topnumber}
+		set {_player} to "%loop-value%" parsed as offlineplayer
+		message "&7%{_topnumber}%.- &6%{_player}% &8» &7%{cf.wins::%loop-value%}% Wins" to {_p}
+		if {_topnumber} > 9:
+			stop
+	message "&8-----{@prefix}&8-----" to {_p}
+
+#Guess whats up next! More functions. Except theses ones are not really important for you.
+
+#This one makes the numbers nice and formatted.
+function regex(n: object) :: text:
+    if "%{_n}%" contains ".":
+        set {_s::*} to split "%{_n}%" at "."
+        set {_n} to "%a({_s::1})%.%last 2 characters of {_s::2}%"
+        return "%{_n}%"
+    else:
+        set {_n} to a("%{_n}%")
+        return "%{_n} ? 0%"
+function a(b: text) :: text:
+    if length of {_b} > 3:
+        return "%a(first length of {_b} - 3 characters of {_b})%,%last 3 characters of {_b}%"
+    return {_b}
+
+#This one makes the side display nice
+function sideFormat(side: text) :: text:
+	if {_side} contains "head":
+		return "{@heads}"
+	else:
+		return "{@tails}"
+#Resetting variables on rejoin so that users if encounter an error can just relog. Also initialize some variables
+on join:
+	set {cf.isActive::%player%} to false
+	if {cf.activeplayer::%player%} is not set:
+		set {cf.activeplayer::%player%} to false
+	if {cf.wins::%player%} is not set:
+		set {cf.wins::%player%} to 0
+		set {cf.loses::%player%} to 0
+
+function soundNo(p: player):
+	play sound "entity.villager.no" with volume 0.2 at {_p}
