@@ -60,7 +60,7 @@ function cfMenu(p: player):
 			add {_p1} to {cf.active.players::%{_p}%}
 			make gui slot {_slot} with skull of (loop-value parsed as an offline player) named "&f%loop-value%" with lore "" and "&7■ Side: %sideFormat({cf.side.%loop-value%})%" and "&7■ Bet: &6$%regex({cf.bet.%loop-value%})%" and "" and "&e>> Click to play":
 				set {_p2} to {_p}
-				if {_p2} = {_p1}:
+				if {_p2} != {_p1}:
 					if {cf.bet.%{_p}%} <= {_p2}'s balance:
 						if {cf.isActive::%{_p2}%} is false:
 							if {cf.isActive::%{_p1}%} is false:
