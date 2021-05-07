@@ -19,7 +19,6 @@ variables:
 	{jobs.xp.lumberjack.%player%} = 0
 	{jobs.xp.excavator.%player%} = 0
 	{jobs.xp.enchanter.%player%} = 0
-	{jobs.xp.fisherman.%player%} = 0
 	{jobs.xp.brewer.%player%} = 0
 
 options:
@@ -34,7 +33,6 @@ options:
 	lumberjack: &8&lLUMBERJACK
 	excavator: &e&lEXCAVATOR
 	enchanter: &d&lENCHANTER
-	fisherman: &3&lFISHERMAN
 	brewer: &b&lBREWER
 
 	#XP Keep on job leave (Discourage players from toggling between jobs depending on what they are doing)
@@ -62,7 +60,6 @@ options:
 #Farmer: (Breaking seeded versions will not count)
 	crop: 0.05 #Wheat,Carrot,Potato,Beetroot,Berries
 	crop.melon: 0.1 #Pumpkins aswell
-	milk: 0.15
 	crop.cocoa: 0.2
 	honey: 1
 
@@ -82,16 +79,13 @@ options:
 #Enchanter:
 	enchant: 0.2 #All enchants, all levels, any item
 
-#Fisherman:
-	fish: 0.25 #Fish anything
-
 #Brewer
 	brew: 0.25 #Not an awkward potion
 
 command test:
 	trigger:
 		clear {jobs.list::*}
-		add "miner" and "farmer" and "hunter" and "lumberjack" and "excavator" and "enchanter" and "fisherman" and "brewer" to {jobs.list::*}
+		add "miner" and "farmer" and "hunter" and "lumberjack" and "excavator" and "enchanter" and "brewer" to {jobs.list::*}
 
 
 command jobs [<text>] [<text>]:
@@ -146,8 +140,6 @@ function jobName(job: text) :: text:
 		return "{@excavator}"
 	else if {_job} contains "enchanter":
 		return "{@enchanter}"
-	else if {_job} contains "fisherman":
-		return "{@fisherman}"
 	else if {_job} contains "brewer":
 		return "{@brewer}"
 
@@ -178,8 +170,6 @@ function jobsMenu(p: player):
 			execute {_p} command "jobs join farmer"
 		make gui slot 15 with bow named "&c&lHUNTER JOB" with lore "&eYou earn money as a hunter by" and "&7killing animals and monsters" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
 			execute {_p} command "jobs join hunter"
-		make gui slot 20 with fishing rod named "&e&lFISHERMAN JOB" with lore "&eYou earn money as a fisherman by" and "&7fishing. That's it really" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join fisherman"
 		make gui slot 21 with smithing table named "&4&lWEAPONSMITH JOB" with lore "&eYou earn money as a weaponsmith by" and "&7crafting and repairing weapons" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
 			execute {_p} command "jobs join weaponsmith"
 		make gui slot 23 with brewing stand named "&b&lBREWER JOB" with lore "&eYou earn money as a brewer by" and "&7brewing potions" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
@@ -202,6 +192,11 @@ on block place:
 	#Farming Related
 	else if event-block is pumpkin or melon:
 		add location of event-block to {jobs.placedBlocks::*}
+	#Lumberjack Related
+	else if event-block is any log:
+		add location of event-block to {jobs.placedBlocks::*}
+	else if event-block is dirt or sand or gravel or clay block or soul sand or red sand:
+		add location of event-block to {jobs.placedBlocks::*}
 
 #Miner:
 on break of any ore or stone or andesite or granite or diorite:
@@ -210,26 +205,48 @@ on break of any ore or stone or andesite or granite or diorite:
 	else:
 		remove location of event-block from {jobs.placedBlocks::*}
 
+
+#Farmer
 on break:
 	if event-block is fully grown wheat plant or fully grown carrot plant or fully grown potato plant or fully grown beetroot plant:
 		message "+ money"
 	else if event-block is ripe cocoa plant:
 		message "+ money"
-
 	
 	else if event-block is pumpkin or melon :
 		if {jobs.placedBlocks::*} does not contain location of event-block:
 			message "+ money"
+		else:
+			remove location of event-block from {jobs.placedBlocks::*}
+
+#Hunter
+on death:
+	if event-entity is cow or sheep or chicken or pig or rabbit:
+		message "+ money" to attacker
+	else if event-entity is zombie or skeleton or spider or cave spider or silverfish or blaze or magma cube or enderman or wither skeleton or guardian:
+		message "+ money" to attacker
+	else if event-entity is slime or creeper or phantom or hoglin or shulker or pillager or witch:
+		message "+ money" to attacker
+	else if event-entity is ghast or evoker or ravager or vex or zoglin:
+		message "+ money" to attacker
+	else if event-entity is wither or ender dragon or elder guardian:
+		message "+ money" to attacker
+
+#Lumberjack
+on break of any log:
+	if {jobs.placedBlocks::*} does not contain location of event-block:
+		message "+ money"
 	else:
 		remove location of event-block from {jobs.placedBlocks::*}
 
+#Excavator
+on break of dirt or sand or gravel or clay block or soul sand or red sand:
+	if {jobs.placedBlocks::*} does not contain location of event-block:
+		message "+ money"
+	else:
+		remove location of event-block from {jobs.placedBlocks::*}
 
+#Enchanter
+on enchant:
+	message "+ money"
 
-command 1:
-	trigger:
-		loop {jobs.placedBlocks::*}:
-			message "%loop-value%"
-
-command 2:
-	trigger:
-		clear {jobs.placedBlocks::*}
