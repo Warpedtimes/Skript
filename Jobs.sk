@@ -9,17 +9,8 @@
 #Requirements: Economy plugin (e.g. Vault)
 
 variables:
-	{jobs.list::*} = "miner", "farmer", "hunter", "lumberjack", "excavator", "enchanter", "fisherman", "brewer"
 
-	#Lists to store the members of a job
-	{jobs.miner::*}
-	{jobs.farmer::*}
-	{jobs.hunter::*}
-	{jobs.lumberjack::*}
-	{jobs.excavator::*}
-	{jobs.enchanter::*}
-	{jobs.fisherman::*}
-	{jobs.brewer::*}
+	{jobs.amount.%player%} = 0
 
 	#Variables to store players job XP
 	{jobs.xp.miner.%player%} = 0
@@ -41,13 +32,13 @@ options:
 	farmer: &6&lFARMER
 	hunter: &c&lHUNTER
 	lumberjack: &8&lLUMBERJACK
-	excavtor: &e&lEXCAVATOR
+	excavator: &e&lEXCAVATOR
 	enchanter: &d&lENCHANTER
 	fisherman: &3&lFISHERMAN
 	brewer: &b&lBREWER
 
 	#XP Keep on job leave (Discourage players from toggling between jobs depending on what they are doing)
-	xpKeep: 0.8 #The player will only retain 80% of their xp.
+	keepXP: 0.8 #The player will only retain 80% of their xp.
 
 
 	#Time in seconds of when to pay (Shows in action bar)
@@ -71,7 +62,6 @@ options:
 #Farmer: (Breaking seeded versions will not count)
 	crop: 0.05 #Wheat,Carrot,Potato,Beetroot,Berries
 	crop.melon: 0.1 #Pumpkins aswell
-	crop.mushroom: 0.1
 	milk: 0.15
 	crop.cocoa: 0.2
 	honey: 1
@@ -98,6 +88,11 @@ options:
 #Brewer
 	brew: 0.25 #Not an awkward potion
 
+command test:
+	trigger:
+		clear {jobs.list::*}
+		add "miner" and "farmer" and "hunter" and "lumberjack" and "excavator" and "enchanter" and "fisherman" and "brewer" to {jobs.list::*}
+
 
 command jobs [<text>] [<text>]:
 	aliases: job, j
@@ -120,30 +115,50 @@ command jobs [<text>] [<text>]:
 
 		else if arg-1 contains "info":
 			if {jobs.list::*} contains arg-2:
-				jobsInfo(player,arg-2)
+				#jobsInfo(player,arg-2)
+				message "Jobs Info"
 			else:
 				message "{@prefix} &a%arg-2%&c is not a valid job!"
 
 		else:
 			jobsMenu(player)
 
-
 function jobsJoin(p: player, job: text):
-	loop {jobs.%{_p}%}:
-		add 1 to {_n}
-	if {_n} < {jobs.%{_p}%.max}:
+	if {jobs.amount.%{_p}%} is not set:
+		set {jobs.amount.%{_p}%} to 0
+	if {jobs.amount.%{_p}%} < {jobs.%{_p}%.max}:
 		add {_p} to {jobs.%{_job}%}
-		message "{@prefix} &aYou are now a %{@%{_job}%}%" to {_p}
+		message "{@prefix} &aYou are now a %jobName({_job})%" to {_p}
+		add 1 to {jobs.amount.%{_p}%}
 	else:
-		message "{@prefix} &Max Jobs Joined" to {_p}
+		message "{@prefix} &cMax Jobs Joined" to {_p}
+
+function jobName(job: text) :: text:
+	if {_job} contains "miner":
+		return "{@miner}"
+	else if {_job} contains "farmer":
+		return "{@farmer}"
+	else if {_job} contains "hunter":
+		return "{@hunter}"
+	else if {_job} contains "lumberjack":
+		return "{@lumberjack}"
+	else if {_job} contains "excavator":
+		return "{@excavator}"
+	else if {_job} contains "enchanter":
+		return "{@enchanter}"
+	else if {_job} contains "fisherman":
+		return "{@fisherman}"
+	else if {_job} contains "brewer":
+		return "{@brewer}"
 
 function jobsLeave(p: player, job: text):
-	if {jobs.%{_job%}%::*} contains {_p}:
-		remove {_p} from {jobs.%{_job%}%::*}
-		{jobs.xp.%{_job}%.%{_p}%} *= {@xpKeep}
-		message "{@prefix} &aYou are no longer a %{@%{_job}%}% &7(-20%% Job XP)" to {_p}
+	if {jobs.%{_job}%::*} contains {_p}:
+		remove 1 from {jobs.amount.%{_p}%}
+		remove {_p} from {jobs.%{_job}%::*}
+		set {jobs.xp.%{_job}%.%{_p}%} to {jobs.xp.%{_job}%.%{_p}%} * {@keepXP}
+		message "{@prefix} &aYou are no longer a %jobName({_job})% &7(-20%% Job XP)" to {_p}
 	else:
-		message "{@prefix} &cYou are not a %{@%{_job}%}%" to {_p}
+		message "{@prefix} &cYou are not a %jobName({_job})%" to {_p}
 
 function jobsStats(p: player):
 	message "Miner XP: %{jobs.xp.miner.%{_p}%}%" to {_p}
@@ -177,16 +192,44 @@ function jobsMenu(p: player):
 	open gui last gui to {_p}
 
 #The "Working" section. This is where depending on the action the player will be paid.
+#Since players can also place blocks that are part of working we need to stop that. This is achieved by on block place, if the block is a block related to working, then add its location to a list. Then on block break if the blocks location is in the list dont reward them money. This way players will only get paid for blocks that naturally spawn. Such as ores.
+
+#Adding to list
+on block place:
+	#Mining Related
+	if event-block is any ore or stone or andesite or granite or diorite:
+		add location of event-block to {jobs.placedBlocks::*}
+	#Farming Related
+	else if event-block is pumpkin or melon:
+		add location of event-block to {jobs.placedBlocks::*}
 
 #Miner:
-on break of any ore:
- if {jobs.ineligible.blocks::*} does not contain event-block:
- 	message "&cTEST"
+on break of any ore or stone or andesite or granite or diorite:
+	if {jobs.placedBlocks::*} does not contain location of event-block:
+		message "+ money"
+	else:
+		remove location of event-block from {jobs.placedBlocks::*}
 
-on block place:
-	if event-block is coal ore:
-		add event-block to {jobs.ineligible.blocks::*}
+on break:
+	if event-block is fully grown wheat plant or fully grown carrot plant or fully grown potato plant or fully grown beetroot plant:
+		message "+ money"
+	else if event-block is ripe cocoa plant:
+		message "+ money"
 
-on block break:
-	if {jobs.ineligible.blocks::*} contains event-block:
-		remove event-block from {jobs.ineligible.blocks::*}
+	
+	else if event-block is pumpkin or melon :
+		if {jobs.placedBlocks::*} does not contain location of event-block:
+			message "+ money"
+	else:
+		remove location of event-block from {jobs.placedBlocks::*}
+
+
+
+command 1:
+	trigger:
+		loop {jobs.placedBlocks::*}:
+			message "%loop-value%"
+
+command 2:
+	trigger:
+		clear {jobs.placedBlocks::*}
