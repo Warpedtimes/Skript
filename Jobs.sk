@@ -1,0 +1,192 @@
+#Jobs Script
+#Version: 1.0
+#Author: Warpedtimes (https://github.com/Warpedtimes/Skript)
+
+#Tested versions: 1.16
+#Skript ver: 2.5.3
+#Addons: skript-gui (https://github.com/APickledWalrus/skript-gui)
+#		 skellet (https://forums.skunity.com/resources/skellett.24/)
+#Requirements: Economy plugin (e.g. Vault)
+
+variables:
+	{jobs.list::*} = "miner", "farmer", "hunter", "lumberjack", "excavator", "enchanter", "fisherman", "brewer"
+
+	#Lists to store the members of a job
+	{jobs.miner::*}
+	{jobs.farmer::*}
+	{jobs.hunter::*}
+	{jobs.lumberjack::*}
+	{jobs.excavator::*}
+	{jobs.enchanter::*}
+	{jobs.fisherman::*}
+	{jobs.brewer::*}
+
+	#Variables to store players job XP
+	{jobs.xp.miner.%player%} = 0
+	{jobs.xp.farmer.%player%} = 0
+	{jobs.xp.hunter.%player%} = 0
+	{jobs.xp.lumberjack.%player%} = 0
+	{jobs.xp.excavator.%player%} = 0
+	{jobs.xp.enchanter.%player%} = 0
+	{jobs.xp.fisherman.%player%} = 0
+	{jobs.xp.brewer.%player%} = 0
+
+options:
+	
+	#Display Prefix
+	prefix: &f[&aJOBS&f]
+
+	#Job Name Displays
+	miner: &f&lMINER
+	farmer: &6&lFARMER
+	hunter: &c&lHUNTER
+	lumberjack: &8&lLUMBERJACK
+	excavtor: &e&lEXCAVATOR
+	enchanter: &d&lENCHANTER
+	fisherman: &3&lFISHERMAN
+	brewer: &b&lBREWER
+
+	#XP Keep on job leave (Discourage players from toggling between jobs depending on what they are doing)
+	xpKeep: 0.8 #The player will only retain 80% of their xp.
+
+
+	#Time in seconds of when to pay (Shows in action bar)
+	wages.time: 30
+
+
+#Wages. The cash value for doing an action of the job.
+
+#Miner: (Per block so fortune wont effect this)
+	stone: 0.1 #This is the same price for all other earth blocks such as andesite etc
+	ore.coal: 0.1
+	ore.quartz: 0.1
+	ore.iron: 0.15
+	ore.gold: 0.2
+	ore.redstone: 0.2
+	ore.lapis: 0.2
+	ore.diamond: 0.5
+	ore.emerald: 0.75
+	ore.debris: 1
+
+#Farmer: (Breaking seeded versions will not count)
+	crop: 0.05 #Wheat,Carrot,Potato,Beetroot,Berries
+	crop.melon: 0.1 #Pumpkins aswell
+	crop.mushroom: 0.1
+	milk: 0.15
+	crop.cocoa: 0.2
+	honey: 1
+
+#Hunter:
+	kill.livestock: 0.25 #Sheep, Cow, Pigs, Chickens, Rabbits
+	kill.spawnerMob: 0.15 #Spawner mobs such as Zombies(All forms), Endermen, Spiders, Magma Cubes, Wither Skeletons(Easy to make a farm)
+	kill.mediumMobs: 0.2 #Slimes, Creepers, Phantoms, Hoglin, Guardian, Shulker, Pillager(excluding raid captain and evokers), Witch
+	kill.hardMobs: 0.5 #Ghast,Evoker, Ravager, Vex, Zoglin
+	kill.boss: 5 #Wither, Enderdragon, Elder Guardian
+
+#Lumberjack:
+	log: 0.1 #(Wage for all logs)
+
+#Excavator:
+	dig: 0.025
+
+#Enchanter:
+	enchant: 0.2 #All enchants, all levels, any item
+
+#Fisherman:
+	fish: 0.25 #Fish anything
+
+#Brewer
+	brew: 0.25 #Not an awkward potion
+
+
+command jobs [<text>] [<text>]:
+	aliases: job, j
+	trigger:
+
+		if arg-1 contains "join":
+			if {jobs.list::*} contains arg-2:
+				jobsJoin(player,arg-2)
+			else:
+				message "{@prefix} &a%arg-2%&c is not a valid job!"
+
+		else if arg-1 contains "leave":
+			if {jobs.list::*} contains arg-2:
+				jobsLeave(player,arg-2)
+			else:
+				message "{@prefix} &a%arg-2%&c is not a valid job!"
+
+		else if arg-1 contains "stats":
+			jobsStats(player)
+
+		else if arg-1 contains "info":
+			if {jobs.list::*} contains arg-2:
+				jobsInfo(player,arg-2)
+			else:
+				message "{@prefix} &a%arg-2%&c is not a valid job!"
+
+		else:
+			jobsMenu(player)
+
+
+function jobsJoin(p: player, job: text):
+	loop {jobs.%{_p}%}:
+		add 1 to {_n}
+	if {_n} < {jobs.%{_p}%.max}:
+		add {_p} to {jobs.%{_job}%}
+		message "{@prefix} &aYou are now a %{@%{_job}%}%" to {_p}
+	else:
+		message "{@prefix} &Max Jobs Joined" to {_p}
+
+function jobsLeave(p: player, job: text):
+	if {jobs.%{_job%}%::*} contains {_p}:
+		remove {_p} from {jobs.%{_job%}%::*}
+		{jobs.xp.%{_job}%.%{_p}%} *= {@xpKeep}
+		message "{@prefix} &aYou are no longer a %{@%{_job}%}% &7(-20%% Job XP)" to {_p}
+	else:
+		message "{@prefix} &cYou are not a %{@%{_job}%}%" to {_p}
+
+function jobsStats(p: player):
+	message "Miner XP: %{jobs.xp.miner.%{_p}%}%" to {_p}
+	message "Farmer XP: %{jobs.xp.farmer.%{_p}%}%" to {_p}
+	message "Hunter XP: %{jobs.xp.hunter.%{_p}%}%" to {_p}
+
+
+function jobsMenu(p: player):
+	create a gui with virtual chest inventory with 5 rows named "            &8&nSelect a Job":
+		make gui slot 11 with iron pickaxe named "&8&lMINER JOB" with lore "&7You earn money as a miner by" and "&7breaking stones and ores." and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join miner"
+		make gui slot 12 with golden shovel named "&e&lDIGGER JOB" with lore "&7You earn money as a digger by" and "&7terraforming the earth" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join digger"
+		make gui slot 13 with crafting table named "&2&lBUILDER JOB" with lore "&eYou earn money as a builder by" and "&7placing blocks and building structures" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join builder"
+		make gui slot 14 with hay bale named "&6&lFARMER JOB" with lore "&eYou earn money as a farmer by" and "&7harvesting and planting crops" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join farmer"
+		make gui slot 15 with bow named "&c&lHUNTER JOB" with lore "&eYou earn money as a hunter by" and "&7killing animals and monsters" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join hunter"
+		make gui slot 20 with fishing rod named "&e&lFISHERMAN JOB" with lore "&eYou earn money as a fisherman by" and "&7fishing. That's it really" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join fisherman"
+		make gui slot 21 with smithing table named "&4&lWEAPONSMITH JOB" with lore "&eYou earn money as a weaponsmith by" and "&7crafting and repairing weapons" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join weaponsmith"
+		make gui slot 23 with brewing stand named "&b&lBREWER JOB" with lore "&eYou earn money as a brewer by" and "&7brewing potions" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join brewer"
+		make gui slot 24 with enchanting table named "&d&lENCHANTER JOB" with lore "&eYou earn money as a enchanter by" and "&7enchanting books and weapons" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
+			execute {_p} command "jobs join enchanter"
+
+		make gui slot 40 with book named "&a&lSERVER JOBS" with lore "&7Jobs allow you to earn money for working your profession" and "&7How much you are paid depends on the amount of job" and "&7related actions you have done." and "" and "&fUnranked players can join a single job." and "&fRankup to unlock access to more." and "" and "&aMain Commands:" and "&7• &f/jobs join&7: Join a job" and "&7• &f/jobs leave&7: Leavea job" and "&7• &f/jobs stats&7: View job stats" and "&7• &f/jobs info&7: View job info" and ""
+	wait 3 ticks
+	open gui last gui to {_p}
+
+#The "Working" section. This is where depending on the action the player will be paid.
+
+#Miner:
+on break of any ore:
+ if {jobs.ineligible.blocks::*} does not contain event-block:
+ 	message "&cTEST"
+
+on block place:
+	if event-block is coal ore:
+		add event-block to {jobs.ineligible.blocks::*}
+
+on block break:
+	if {jobs.ineligible.blocks::*} contains event-block:
+		remove event-block from {jobs.ineligible.blocks::*}
