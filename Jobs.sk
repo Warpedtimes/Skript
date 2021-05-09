@@ -19,7 +19,7 @@ options:
 	#Max Level attainable in any job
 	maxLevel: 25
 
-	#Default max jobs. Can be changed externally by manipulating {jobs.amount.%player%}
+	#Default max jobs. Can be changed externally by manipulating {jobs.%{_p}%.max}
 	maxJobsDefault: 1
 
 	#Job Name Displays
@@ -120,11 +120,8 @@ command jobs [<text>] [<text>]:
 
 #How the skript handles players joining a job
 function jobsJoin(p: player, job: text):
-	#Sets default max jobs
-	if {jobs.amount.%{_p}%} is not set:
-		set {jobs.amount.%{_p}%} to {@maxJobsDefault}
 	#Checks if the player is already that job
-	if {jobs.is%{_job}%.%{_p}%} is false:
+	if {jobs.is%{_job}%.%{_p}%} is not true:
 		#Checks if they have an open job spot
 		if {jobs.amount.%{_p}%} < {jobs.%{_p}%.max}:
 			set {jobs.is%{_job}%.%{_p}%} to true
@@ -132,7 +129,7 @@ function jobsJoin(p: player, job: text):
 			soundsYes({_p})
 			add 1 to {jobs.amount.%{_p}%}
 		else:
-			message "{@prefix} &aMax Jobs Joined &7(%{jobs.%{_p}%.max}%)" to {_p}
+			message "{@prefix} &aMax Jobs Joined &7(%{jobs.%{_p}%.max}%&7)" to {_p}
 			soundsNo({_p})
 	else:
 		message "{@prefix} &aYou already have the job %jobName({_job})%" to {_p}
@@ -486,5 +483,6 @@ on join:
 		set {jobs.level.enchanter.%player%} to 1
 	if {jobs.bonus.%player%} is not set:
 		set {jobs.bonus.%player%} to 1
-
+	if {jobs.%player%.max} is not set:
+		set {jobs.%player%.max} to {@maxJobsDefault}
 
