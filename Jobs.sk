@@ -182,11 +182,15 @@ function jobsLeaveAll(p: player):
 
 #Function for printing out the players stats
 function jobsStats(p: player):
+	message "" to {_p}
+	message "-----{@prefix}-----" to {_p}
 	loop {jobs.list::*}:
 		if {jobs.xp.%loop-value%.%{_p}%} is not set:
 			set {jobs.xp.%loop-value%.%{_p}%} to 0
 		set {_jobName} to jobName(loop-value)
 		message "%{_jobName}%: Level: %{jobs.level.%loop-value%.%{_p}%}% &7(%{jobs.xp.%loop-value%.%{_p}%}%/&7%{jobs.level.%loop-value%.%{_p}%}*500+({jobs.level.%loop-value%.%{_p}%}-1)*500%&7)" to {_p}
+	message "-----{@prefix}-----" to {_p}
+	message "" to {_p}
 
 #How payment is given to the player. LevelBonus and Jobs bonus are different. By default jobs bonus is 1 and you can increase it as a reward for doing other things or sell it via buycraft
 #Good luck reading this all its a bit complicated and could probably do with a rewrite to simplify
@@ -251,21 +255,21 @@ function jobsMenu(p: player):
 				else if gui-click action is right mouse button with shift:
 					jobsInfo({_p},"miner")
 
-		make gui slot 11 with hay bale named "{@farmer} - Level %{jobs.level.farmer.%{_p}%}%" with lore "&eYou earn money as a farmer by" and "&7harvesting crops" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+		make gui slot 11 with hay bale named "{@farmer} - Level %{jobs.level.farmer.%{_p}%}%" with lore "&7You earn money as a farmer by" and "&7harvesting crops" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
 			if gui-click action is right mouse button with shift:
 				jobsInfo({_p},"farmer")
 			else:
 				jobsJoin({_p},"farmer")
 				jobsMenu({_p})
 		if {jobs.isFarmer.%{_p}%} = true:
-			make gui slot 11 with hay bale of power 1 named "{@farmer} - Level %{jobs.level.farmer.%{_p}%}%" with lore "&eYou earn money as a farmer by" and "&7harvesting crops" and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			make gui slot 11 with hay bale of power 1 named "{@farmer} - Level %{jobs.level.farmer.%{_p}%}%" with lore "&7You earn money as a farmer by" and "&7harvesting crops" and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
 				if gui-click-action is right mouse button:
 					jobsLeave({_p},"farmer")
 					jobsMenu({_p})
 				else if gui-click action is right mouse button with shift:
 					jobsInfo({_p},"farmer")
 
-		make gui slot 12 with bow named "{@hunter} - Level %{jobs.level.hunter.%{_p}%}%" with lore "&eYou earn money as a hunter by" and "&7killing animals and monsters" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+		make gui slot 12 with bow named "{@hunter} - Level %{jobs.level.hunter.%{_p}%}%" with lore "&7You earn money as a hunter by" and "&7killing animals and monsters" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
 			if gui-click action is right mouse button with shift:
 				jobsInfo({_p},"hunter")
 			else:
