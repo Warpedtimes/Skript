@@ -6,25 +6,21 @@
 #Skript ver: 2.5.3
 #Addons: skript-gui (https://github.com/APickledWalrus/skript-gui)
 #		 skellet (https://forums.skunity.com/resources/skellett.24/)
+#		 SkBee (https://github.com/ShaneBeee/SkBee/)
 #Requirements: Economy plugin (e.g. Vault)
 
-variables:
-
-	{jobs.amount.%player%} = 0
-
-	#Variables to store players job XP
-	{jobs.xp.miner.%player%} = 0
-	{jobs.xp.farmer.%player%} = 0
-	{jobs.xp.hunter.%player%} = 0
-	{jobs.xp.lumberjack.%player%} = 0
-	{jobs.xp.excavator.%player%} = 0
-	{jobs.xp.enchanter.%player%} = 0
-	{jobs.xp.brewer.%player%} = 0
-
 options:
-	
-	#Display Prefix
+	#Display Prefix in chat
 	prefix: &f[&aJOBS&f]
+
+	#Payrise per each level. This is 3%.
+	levelBonus: 0.03
+
+	#Max Level attainable in any job
+	maxLevel: 25
+
+	#Default max jobs. Can be changed externally by manipulating {jobs.amount.%player%}
+	maxJobsDefault: 1
 
 	#Job Name Displays
 	miner: &f&lMINER
@@ -33,19 +29,14 @@ options:
 	lumberjack: &8&lLUMBERJACK
 	excavator: &e&lEXCAVATOR
 	enchanter: &d&lENCHANTER
-	brewer: &b&lBREWER
 
 	#XP Keep on job leave (Discourage players from toggling between jobs depending on what they are doing)
-	keepXP: 0.8 #The player will only retain 80% of their xp.
-
-
-	#Time in seconds of when to pay (Shows in action bar)
-	wages.time: 30
-
+	#Currently only takes XP from current level. e.g. Level 3 with 100 XP means they will be Level 3 with 80 XP. Working on something to fix this
+	keepXP: 0.8
 
 #Wages. The cash value for doing an action of the job.
-
 #Miner: (Per block so fortune wont effect this)
+	netherrack: 0.05
 	stone: 0.1 #This is the same price for all other earth blocks such as andesite etc
 	ore.coal: 0.1
 	ore.quartz: 0.1
@@ -61,123 +52,279 @@ options:
 	crop: 0.05 #Wheat,Carrot,Potato,Beetroot,Berries
 	crop.melon: 0.1 #Pumpkins aswell
 	crop.cocoa: 0.2
-	honey: 1
 
 #Hunter:
-	kill.livestock: 0.25 #Sheep, Cow, Pigs, Chickens, Rabbits
-	kill.spawnerMob: 0.15 #Spawner mobs such as Zombies(All forms), Endermen, Spiders, Magma Cubes, Wither Skeletons(Easy to make a farm)
-	kill.mediumMobs: 0.2 #Slimes, Creepers, Phantoms, Hoglin, Guardian, Shulker, Pillager(excluding raid captain and evokers), Witch
-	kill.hardMobs: 0.5 #Ghast,Evoker, Ravager, Vex, Zoglin
-	kill.boss: 5 #Wither, Enderdragon, Elder Guardian
+	kill.livestock: 0.25 #Cow, Sheep, Chicken, Pig, and Rabbits
+	kill.spawnerMob: 0.15 #Zombie, Skeleton, Spider, Cave Spider, Silverfish, Blaze, Magma Cube, Enderman, Wither Skeleton, and Guardians
+	kill.mediumMobs: 0.2 #Slime, Creeper, Phantoms, Hoglin, Shulker, Pillager, and Witch
+	kill.hardMobs: 0.5 #Ghast, Evoker, Ravager, Vex, Zoglin, and Piglin Brutes
+	kill.boss: 5 #Wither, Enderdragon, and Elder Guardian
 
 #Lumberjack:
 	log: 0.1 #(Wage for all logs)
 
 #Excavator:
-	dig: 0.025
+	dig: 0.02
 
 #Enchanter:
 	enchant: 0.2 #All enchants, all levels, any item
 
-#Brewer
-	brew: 0.25 #Not an awkward potion
-
-command test:
-	trigger:
-		clear {jobs.list::*}
-		add "miner" and "farmer" and "hunter" and "lumberjack" and "excavator" and "enchanter" and "brewer" to {jobs.list::*}
-
-
+#Main Command and its function calls
 command jobs [<text>] [<text>]:
 	aliases: job, j
 	trigger:
-
 		if arg-1 contains "join":
+			#Checks the jobs.list list to see if its a valid job
 			if {jobs.list::*} contains arg-2:
 				jobsJoin(player,arg-2)
 			else:
-				message "{@prefix} &a%arg-2%&c is not a valid job!"
+				if arg-2 is not set:
+					message "{@prefix} &aPlease specify a job!"
+					#Sound feedback for player when they do something. Changeable at the bottom of the script
+					soundsNo({_p})
+				else:
+					message "{@prefix} &a%arg-2%&c is not a valid job!"
+					soundsNo({_p})
 
 		else if arg-1 contains "leave":
 			if {jobs.list::*} contains arg-2:
 				jobsLeave(player,arg-2)
+			#Ability for player to leave all their jobs in 1 go
+			else if arg-2 is "-all":
+				jobsLeaveAll(player)
 			else:
-				message "{@prefix} &a%arg-2%&c is not a valid job!"
+				if arg-2 is not set:
+					message "{@prefix} &aPlease specify a job or type -all to leave all jobs."
+					soundsNo({_p})
+				else:
+					message "{@prefix} &a%arg-2%&c is not a valid job!"
+					soundsNo({_p})
 
 		else if arg-1 contains "stats":
 			jobsStats(player)
 
+		#Will printout levels and XP.
 		else if arg-1 contains "info":
 			if {jobs.list::*} contains arg-2:
-				#jobsInfo(player,arg-2)
-				message "Jobs Info"
+				jobsInfo(player,arg-2)
 			else:
-				message "{@prefix} &a%arg-2%&c is not a valid job!"
-
+				if arg-2 is not set:
+					message "{@prefix} &aPlease specify a job!"
+					soundsNo({_p})
+				else:
+					message "{@prefix} &a%arg-2%&c is not a valid job!"
+					soundsNo({_p})
+		#Else just open the jobs menu for the player
 		else:
 			jobsMenu(player)
 
+#How the skript handles players joining a job
 function jobsJoin(p: player, job: text):
+	#Sets default max jobs
 	if {jobs.amount.%{_p}%} is not set:
-		set {jobs.amount.%{_p}%} to 0
-	if {jobs.amount.%{_p}%} < {jobs.%{_p}%.max}:
-		add {_p} to {jobs.%{_job}%}
-		message "{@prefix} &aYou are now a %jobName({_job})%" to {_p}
-		add 1 to {jobs.amount.%{_p}%}
+		set {jobs.amount.%{_p}%} to {@maxJobsDefault}
+	#Checks if the player is already that job
+	if {jobs.is%{_job}%.%{_p}%} is false:
+		#Checks if they have an open job spot
+		if {jobs.amount.%{_p}%} < {jobs.%{_p}%.max}:
+			set {jobs.is%{_job}%.%{_p}%} to true
+			message "{@prefix} &aYou now have the job %jobName({_job})%" to {_p}
+			soundsYes({_p})
+			add 1 to {jobs.amount.%{_p}%}
+		else:
+			message "{@prefix} &aMax Jobs Joined &7(%{jobs.%{_p}%.max}%)" to {_p}
+			soundsNo({_p})
 	else:
-		message "{@prefix} &cMax Jobs Joined" to {_p}
+		message "{@prefix} &aYou already have the job %jobName({_job})%" to {_p}
+		soundsNo({_p})
 
-function jobName(job: text) :: text:
-	if {_job} contains "miner":
-		return "{@miner}"
-	else if {_job} contains "farmer":
-		return "{@farmer}"
-	else if {_job} contains "hunter":
-		return "{@hunter}"
-	else if {_job} contains "lumberjack":
-		return "{@lumberjack}"
-	else if {_job} contains "excavator":
-		return "{@excavator}"
-	else if {_job} contains "enchanter":
-		return "{@enchanter}"
-	else if {_job} contains "brewer":
-		return "{@brewer}"
-
+#How job leaves are handled
 function jobsLeave(p: player, job: text):
-	if {jobs.%{_job}%::*} contains {_p}:
+	#Checks if the player has the job
+	if {jobs.is%{_job}%.%{_p}%} is true:
 		remove 1 from {jobs.amount.%{_p}%}
-		remove {_p} from {jobs.%{_job}%::*}
+		set {jobs.is%{_job}%.%{_p}%} to false
+		#Removes the set amount of XP from the job
 		set {jobs.xp.%{_job}%.%{_p}%} to {jobs.xp.%{_job}%.%{_p}%} * {@keepXP}
 		message "{@prefix} &aYou are no longer a %jobName({_job})% &7(-20%% Job XP)" to {_p}
-	else:
-		message "{@prefix} &cYou are not a %jobName({_job})%" to {_p}
+		soundsNo({_p})
+		stop
+	message "{@prefix} &aYou do not have the job %jobName({_job})%" to {_p}
+	soundsNo({_p})
 
+#Leave all command. Basically just checks what jobs the player has and then passes it to jobsLeave
+function jobsLeaveAll(p: player):
+	if {jobs.isMiner.%{_p}%} = true:
+		set {_employed} to true
+		jobsLeave({_p},"miner")
+
+	if {jobs.isFarmer.%{_p}%} = true:
+		jobsLeave({_p},"farmer")
+		set {_employed} to true
+
+	if {jobs.isHunter.%{_p}%} = true:
+		jobsLeave({_p},"hunter")
+		set {_employed} to true
+
+	if {jobs.isLumberjack.%{_p}%} = true:
+		jobsLeave({_p},"lumberjack")
+		set {_employed} to true
+
+	if {jobs.isExcavator.%{_p}%} = true:
+		jobsLeave({_p},"excavator")
+		set {_employed} to true
+
+	if {jobs.isEnchanter.%{_p}%} = true:
+		jobsLeave({_p},"enchanter")
+		set {_employed} to true
+
+	#Tell the player that they dont have a job.
+	if {_employed} is not true:
+		message "{@prefix} &aYou are unemployed. Join a job with &a/jobs" to {_p}
+		soundsNo({_p})
+
+#Function for printing out the players stats
 function jobsStats(p: player):
-	message "Miner XP: %{jobs.xp.miner.%{_p}%}%" to {_p}
-	message "Farmer XP: %{jobs.xp.farmer.%{_p}%}%" to {_p}
-	message "Hunter XP: %{jobs.xp.hunter.%{_p}%}%" to {_p}
+	loop {jobs.list::*}:
+		if {jobs.xp.%loop-value%.%{_p}%} is not set:
+			set {jobs.xp.%loop-value%.%{_p}%} to 0
+		set {_jobName} to jobName(loop-value)
+		message "%{_jobName}%: Level: %{jobs.level.%loop-value%.%{_p}%}% &7(%{jobs.xp.%loop-value%.%{_p}%}%/&7%{jobs.level.%loop-value%.%{_p}%}*500+({jobs.level.%loop-value%.%{_p}%}-1)*500%&7)" to {_p}
+
+#How payment is given to the player. LevelBonus and Jobs bonus are different. By default jobs bonus is 1 and you can increase it as a reward for doing other things or sell it via buycraft
+#Good luck reading this all its a bit complicated and could probably do with a rewrite to simplify
+function wage(p: player,pay: number,job: text):
+	add {_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)) to {_p}'s balance
+	if {jobs.level.%{_job}%.%{_p}%} < {@maxLevel}:
+		add {_pay}*10 to {jobs.xp.%{_job}%.%{_p}%}
+		if {jobs.xp.%{_job}%.%{_p}%} >= {jobs.level.%{_job}%.%{_p}%}*500+({jobs.level.%{_job}%.%{_p}%}-1)*500:
+			send title "%jobName({_job})% &6Level Up!" with subtitle "&7%({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)*100)%%% &f-> &7%({@levelBonus}*{jobs.level.%{_job}%.%{_p}%})*100%%%" to {_p}
+			soundsLevelUp({_p})
+			set {jobs.xp.%{_job}%.%{_p}%} to 0
+			add 1 to {jobs.level.%{_job}%.%{_p}%}
+		send action bar "&6+ $%regex({_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)))%&F | &3 xp (%regex({jobs.xp.%{_job}%.%{_p}%})%&7/&3%regex({jobs.level.%{_job}%.%{_p}%}*500+({jobs.level.%{_job}%.%{_p}%}-1)*500)%&3)" to {_p}
+	else:
+		send action bar "&6+ $%regex({_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)))%&F | &3 xp (&7MAX LEVEL)" to {_p}
+	soundsPay({_p})
+
+#Jobs info for the gui. Just includes every action that the player cna do for money
+function jobsInfo(p: player, job: text):
+	create a gui with virtual chest inventory with 4 rows named "            &8&nJobs Info":
+		if {_job} contains "miner":
+			make gui slot 13 with iron pickaxe named "{@miner}" with lore "" and "&eMine:" and "  &7■ Stone" and "  &7■ Andesite" and "  &7■ Diorite" and "  &7■ Blackstone" and "  &7■ Netherrack" and "  &7■ Coal Ore" and "  &7■ Iron Ore" and "  &7■ Gold Ore" and "  &7■ Redstone" and "  &7■ Lapis" and "  &7■ Emerald" and "  &7■ Diamond" and "  &7■ Ancient Debris" and "  &7■ Nether Quartz" with nbt "{HideFlags:63}"
+
+		else if {_job} contains "farmer":
+			make gui slot 13 with hay bale named "{@farmer}" with lore "" and "&eHarvest:" and "  &7■ Wheat" and "  &7■ Carrots" and "  &7■ Potatos" and "  &7■ Beetroot" and "  &7■ Cocoa" and "  &7■ Pumpkins" and "  &7■ Melons" with nbt "{HideFlags:63}"
+
+		else if {_job} contains "hunter":
+			make gui slot 12 with bow named "{@hunter}" with lore "" and "&eKill:" and "  &7■ Cows" and "  &7■ Sheep" and "  &7■ Chicken" and "  &7■ Pigs" and "  &7■ Rabbits" and "  &7■ Zombies" and "  &7■ Skeletons" and "  &7■ Spiders" and "  &7■ Creepers" and "  &7■ Phantoms" and "  &7■ Slimes" and "  &7■ Pillagers" and "  &7■ Evokers" and "  &7■ Ravagers" and "  &7■ Vex" with nbt "{HideFlags:63}"
+			make gui slot 14 with bow named "{@hunter}" with lore "" and "&cKill:" and "  &7■ Guardians" and "  &7■ Elder Guardians" and "  &7■ Slimes" and "  &7■ Witches" and "  &7■ Piglins" and "  &7■ Hoglins" and "  &7■ Zoglins" and "  &7■ Blazes" and "  &7■ Magma Cubes" and "  &7■ Wither Skeletons" and "  &7■ Ghasts" and "  &7■ Withers" and "  &b■ Ender dragons" with nbt "{HideFlags:63}"
+
+		else if {_job} contains "lumberjack":
+			make gui slot 13 with oak log named "{@lumberjack}" with lore "" and "&eChop:" and "  &7■ Oak Logs" and "  &7■ Spruce Logs" and "  &7■ Birch Logs" and "  &7■ Jungle Logs" and "  &7■ Dark Oak Logs" with nbt "{HideFlags:63}"
+
+		else if {_job} contains "excavator":
+			make gui slot 13 with golden shovel named "{@excavator}" with lore "" and "&eDig:" and "  &7■ Grass Blocks" and "  &7■ Dirt" and "  &7■ Sand" and "  &7■ Red Sand" and "  &7■ Gravel" and "  &7■ Clay" with nbt "{HideFlags:63}"
+
+		else if {_job} contains "enchanter":
+			make gui slot 13 with enchanting table named "{@enchanter}" with lore "" and "&eEnchant:" and "  &7■ Books" and "  &7■ Tools and Weapons" with nbt "{HideFlags:63}"
+
+		make gui slot 31 with barrier named "&cBack?":
+			jobsMenu({_p})
+
+	wait 3 ticks
+	open gui last gui to {_p}
 
 
+#Main Menu of the jobs system. here players can join, leave and view info on every job.
 function jobsMenu(p: player):
-	create a gui with virtual chest inventory with 5 rows named "            &8&nSelect a Job":
-		make gui slot 11 with iron pickaxe named "&8&lMINER JOB" with lore "&7You earn money as a miner by" and "&7breaking stones and ores." and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join miner"
-		make gui slot 12 with golden shovel named "&e&lDIGGER JOB" with lore "&7You earn money as a digger by" and "&7terraforming the earth" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join digger"
-		make gui slot 13 with crafting table named "&2&lBUILDER JOB" with lore "&eYou earn money as a builder by" and "&7placing blocks and building structures" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join builder"
-		make gui slot 14 with hay bale named "&6&lFARMER JOB" with lore "&eYou earn money as a farmer by" and "&7harvesting and planting crops" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join farmer"
-		make gui slot 15 with bow named "&c&lHUNTER JOB" with lore "&eYou earn money as a hunter by" and "&7killing animals and monsters" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join hunter"
-		make gui slot 21 with smithing table named "&4&lWEAPONSMITH JOB" with lore "&eYou earn money as a weaponsmith by" and "&7crafting and repairing weapons" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join weaponsmith"
-		make gui slot 23 with brewing stand named "&b&lBREWER JOB" with lore "&eYou earn money as a brewer by" and "&7brewing potions" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join brewer"
-		make gui slot 24 with enchanting table named "&d&lENCHANTER JOB" with lore "&eYou earn money as a enchanter by" and "&7enchanting books and weapons" and "" and "&a>> Click to join this job!" with nbt "{HideFlags:63}":
-			execute {_p} command "jobs join enchanter"
+	create a gui with virtual chest inventory with 4 rows named "            &8&nSelect a Job":
 
-		make gui slot 40 with book named "&a&lSERVER JOBS" with lore "&7Jobs allow you to earn money for working your profession" and "&7How much you are paid depends on the amount of job" and "&7related actions you have done." and "" and "&fUnranked players can join a single job." and "&fRankup to unlock access to more." and "" and "&aMain Commands:" and "&7• &f/jobs join&7: Join a job" and "&7• &f/jobs leave&7: Leavea job" and "&7• &f/jobs stats&7: View job stats" and "&7• &f/jobs info&7: View job info" and ""
+		make gui slot 10 with iron pickaxe named "{@miner} - Level %{jobs.level.miner.%{_p}%}%" with lore "&7You earn money as a miner by" and "&7breaking stones and ores." and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			if gui-click action is right mouse button with shift:
+				jobsInfo({_p},"miner")
+			else:
+				jobsJoin({_p},"miner")
+				jobsMenu({_p})
+		if {jobs.isMiner.%{_p}%} = true:
+			make gui slot 10 with iron pickaxe of power 1 named "{@miner} - Level %{jobs.level.miner.%{_p}%}%" with lore "&7You earn money as a miner by" and "&7breaking stones and ores." and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+				if gui-click-action is right mouse button:
+					jobsLeave({_p},"miner")
+					jobsMenu({_p})
+				else if gui-click action is right mouse button with shift:
+					jobsInfo({_p},"miner")
+
+		make gui slot 11 with hay bale named "{@farmer} - Level %{jobs.level.farmer.%{_p}%}%" with lore "&eYou earn money as a farmer by" and "&7harvesting crops" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			if gui-click action is right mouse button with shift:
+				jobsInfo({_p},"farmer")
+			else:
+				jobsJoin({_p},"farmer")
+				jobsMenu({_p})
+		if {jobs.isFarmer.%{_p}%} = true:
+			make gui slot 11 with hay bale of power 1 named "{@farmer} - Level %{jobs.level.farmer.%{_p}%}%" with lore "&eYou earn money as a farmer by" and "&7harvesting crops" and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+				if gui-click-action is right mouse button:
+					jobsLeave({_p},"farmer")
+					jobsMenu({_p})
+				else if gui-click action is right mouse button with shift:
+					jobsInfo({_p},"farmer")
+
+		make gui slot 12 with bow named "{@hunter} - Level %{jobs.level.hunter.%{_p}%}%" with lore "&eYou earn money as a hunter by" and "&7killing animals and monsters" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			if gui-click action is right mouse button with shift:
+				jobsInfo({_p},"hunter")
+			else:
+				jobsJoin({_p},"hunter")
+				jobsMenu({_p})
+		if {jobs.isHunter.%{_p}%} = true:
+			make gui slot 12 with bow of power 1 named "{@hunter} - Level %{jobs.level.hunter.%{_p}%}%" with lore "&eYou earn money as a hunter by" and "&7killing animals and monsters" and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+				if gui-click-action is right mouse button:
+					jobsLeave({_p},"hunter")
+					jobsMenu({_p})
+				else if gui-click action is right mouse button with shift:
+					jobsInfo({_p},"hunter")
+
+		make gui slot 14 with oak log named "{@lumberjack} - Level %{jobs.level.lumberjack.%{_p}%}%" with lore "&7You earn money as a lumberjack by" and "&7chopping down trees" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			if gui-click action is right mouse button with shift:
+				jobsInfo({_p},"lumberjack")
+			else:
+				jobsJoin({_p},"lumberjack")
+				jobsMenu({_p})
+		if {jobs.isLumberjack.%{_p}%} = true:
+			make gui slot 14 with oak log of power 1 named "{@lumberjack} - Level %{jobs.level.lumberjack.%{_p}%}%" with lore "&7You earn money as a lumberjack by" and "&7chopping down trees" and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+				if gui-click-action is right mouse button:
+					jobsLeave({_p},"lumberjack")
+					jobsMenu({_p})
+				else if gui-click action is right mouse button with shift:
+					jobsInfo({_p},"lumberjack")
+
+		make gui slot 15 with golden shovel named "{@excavator} - Level %{jobs.level.excavator.%{_p}%}%" with lore "&7You earn money as a digger by" and "&7breaking sediment blocks" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			if gui-click action is right mouse button with shift:
+				jobsInfo({_p},"excavator")
+			else:
+				jobsJoin({_p},"excavator")
+				jobsMenu({_p})
+		if {jobs.isExcavator.%{_p}%} = true:
+			make gui slot 15 with golden shovel of power 1 named "{@excavator} - Level %{jobs.level.excavator.%{_p}%}%" with lore "&7You earn money as a digger by" and "&7breaking sediment blocks" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+				if gui-click-action is right mouse button:
+					jobsLeave({_p},"excavator")
+					jobsMenu({_p})
+				else if gui-click action is right mouse button with shift:
+					jobsInfo({_p},"miner")
+
+		make gui slot 16 with enchanting table named "{@enchanter} - Level %{jobs.level.enchanter.%{_p}%}%" with lore "&eYou earn money as a enchanter by" and "&7enchanting books and weapons" and "" and "&a>> Click to join this job!" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+			if gui-click action is right mouse button with shift:
+				jobsInfo({_p},"enchanter")
+			else:
+				jobsJoin({_p},"enchanter")
+				jobsMenu({_p})
+		if {jobs.isEnchanter.%{_p}%} = true:
+			make gui slot 16 with enchanting table of power 1 named "{@enchanter} - Level %{jobs.level.enchanter.%{_p}%}%" with lore "&eYou earn money as a enchanter by" and "&7enchanting books and weapons" and "" and "&c<< Right-Click to leave this job" and "&a>> Shift-Right-Click to view job info" with nbt "{HideFlags:63}":
+				if gui-click-action is right mouse button:
+					jobsLeave({_p},"enchanter")
+					jobsMenu({_p})
+				else if gui-click action is right mouse button with shift:
+					jobsInfo({_p},"enchanter")
+
+		make gui slot 31 with book named "&a&lSERVER JOBS" with lore "&7Jobs allow you to earn money for working your profession" and "&7How much you are paid depends on the amount of job" and "&7related actions you have done." and "" and "&fUnranked players can join a single job." and "&fRankup to unlock access to more." and "" and "&aMain Commands:" and "&7• &f/jobs join&7: Join a job" and "&7• &f/jobs leave&7: Leave a job" and "&7• &f/jobs stats&7: View job stats" and "&7• &f/jobs info&7: View job info" and "" and "&fEach level increase in job will provide" and "&fa 3%% increase in income"
 	wait 3 ticks
 	open gui last gui to {_p}
 
@@ -199,9 +346,31 @@ on block place:
 		add location of event-block to {jobs.placedBlocks::*}
 
 #Miner:
-on break of any ore or stone or andesite or granite or diorite:
+on break of any ore or ancient debris or stone or andesite or granite or diorite or blackstone or netherrack:
 	if {jobs.placedBlocks::*} does not contain location of event-block:
-		message "+ money"
+		if {jobs.isMiner.%player%} = true:
+			if event-block is ancient debris:
+				wage(player,{@ore.debris},"miner")
+			else if event-block is coal ore:
+				wage(player,{@ore.coal},"miner")
+			else if event-block is iron ore:
+				wage(player,{@ore.iron},"miner")
+			else if event-block is gold ore:
+				wage(player,{@ore.gold},"miner")
+			else if event-block is redstone ore:
+				wage(player,{@ore.redstone},"miner")
+			else if event-block is lapis ore:
+				wage(player,{@ore.lapis},"miner")
+			else if event-block is diamond ore:
+				wage(player,{@ore.diamond},"miner")
+			else if event-block is emerald ore:
+				wage(player,{@ore.emerald},"miner")
+			else if event-block is nether quartz ore:
+				wage(player,{@ore.quartz},"miner")
+			else if event-block is netherrack:
+				wage(player,{@netherrack},"miner")
+			else:
+				wage(player,5,"miner")
 	else:
 		remove location of event-block from {jobs.placedBlocks::*}
 
@@ -209,44 +378,113 @@ on break of any ore or stone or andesite or granite or diorite:
 #Farmer
 on break:
 	if event-block is fully grown wheat plant or fully grown carrot plant or fully grown potato plant or fully grown beetroot plant:
-		message "+ money"
+		if {jobs.isFarmer.%player%} = true:
+			wage(player,{@crop},"farmer")
+
 	else if event-block is ripe cocoa plant:
-		message "+ money"
+		if {jobs.isFarmer.%player%} = true:
+			wage(player,{@crop.cocoa},"farmer")
 	
 	else if event-block is pumpkin or melon :
 		if {jobs.placedBlocks::*} does not contain location of event-block:
-			message "+ money"
+			if {jobs.isFarmer.%player%} = true:
+				wage(player,{@crop.melon},"farmer")
 		else:
 			remove location of event-block from {jobs.placedBlocks::*}
 
 #Hunter
 on death:
-	if event-entity is cow or sheep or chicken or pig or rabbit:
-		message "+ money" to attacker
-	else if event-entity is zombie or skeleton or spider or cave spider or silverfish or blaze or magma cube or enderman or wither skeleton or guardian:
-		message "+ money" to attacker
-	else if event-entity is slime or creeper or phantom or hoglin or shulker or pillager or witch:
-		message "+ money" to attacker
-	else if event-entity is ghast or evoker or ravager or vex or zoglin:
-		message "+ money" to attacker
-	else if event-entity is wither or ender dragon or elder guardian:
-		message "+ money" to attacker
+	if {jobs.isHunter.%player%} = true:
+		if event-entity is cow or sheep or chicken or pig or rabbit:
+			wage(player,{@kill.livestock},"hunter")
+		else if event-entity is zombie or skeleton or spider or cave spider or silverfish or blaze or magma cube or enderman or wither skeleton or guardian:
+			wage(player,{@kill.spawnerMob},"hunter")
+		else if event-entity is slime or creeper or phantom or hoglin or shulker or pillager or witch:
+			wage(player,{@kill.mediumMobs},"hunter")
+		else if event-entity is ghast or evoker or ravager or vex or zoglin:
+			wage(player,{@kill.hardMobs},"hunter")
+		else if event-entity is wither or ender dragon or elder guardian:
+			wage(player,{@kill.boss},"hunter")
 
 #Lumberjack
 on break of any log:
 	if {jobs.placedBlocks::*} does not contain location of event-block:
-		message "+ money"
+		if {jobs.isLumberjack.%player%} = true:
+			wage(player,{@log},"lumberjack")
 	else:
 		remove location of event-block from {jobs.placedBlocks::*}
 
 #Excavator
-on break of dirt or sand or gravel or clay block or soul sand or red sand:
+on break of dirt or grass block or sand or gravel or clay block or soul sand or red sand:
 	if {jobs.placedBlocks::*} does not contain location of event-block:
-		message "+ money"
+		if {jobs.isExcavator.%player%} = true:
+			wage(player,{@dig},"excavator")
 	else:
 		remove location of event-block from {jobs.placedBlocks::*}
 
 #Enchanter
 on enchant:
-	message "+ money"
+	if {jobs.isEnchanter.%player%} = true:
+		wage(player,{@enchant},"enchanter")
+
+
+#Just a functionj for getting the correct formats for names
+function jobName(job: text) :: text:
+	if {_job} contains "miner":
+		return "{@miner}"
+	else if {_job} contains "farmer":
+		return "{@farmer}"
+	else if {_job} contains "hunter":
+		return "{@hunter}"
+	else if {_job} contains "lumberjack":
+		return "{@lumberjack}"
+	else if {_job} contains "excavator":
+		return "{@excavator}"
+	else if {_job} contains "enchanter":
+		return "{@enchanter}"
+
+#Functions for what sounds are played
+function soundsNo(p: player):
+	play sound "entity.villager.no" with volume 0.2 at {_p}
+
+function soundsYes(p: player):
+	play sound "entity.villager.yes" with volume 0.2 at {_p}
+
+function soundsPay(p: player):
+	play sound "entity.experience_orb.pickup" with volume 0.1 at {_p}
+
+function soundsLevelUp(p: player):
+	play sound "entity.player.levelup" with volume 0.3 at {_p}
+
+#Function to format the numbers nicely
+function regex(n: object) :: text:
+    if "%{_n}%" contains ".":
+        set {_s::*} to split "%{_n}%" at "."
+        set {_n} to "%a({_s::1})%.%last 2 characters of {_s::2}%"
+        return "%{_n}%"
+    else:
+        set {_n} to a("%{_n}%")
+        return "%{_n} ? 0%"
+function a(b: text) :: text:
+    if length of {_b} > 3:
+        return "%a(first length of {_b} - 3 characters of {_b})%,%last 3 characters of {_b}%"
+    return {_b}
+
+#Making sure players have the right variables by default set for them. Otherwise when viewing stats it'll not display correctly
+on join:
+	if {jobs.level.miner.%player%} is not set:
+		set {jobs.level.miner.%player%} to 1
+	if {jobs.level.farmer.%player%} is not set:
+		set {jobs.level.farmer.%player%} to 1
+	if {jobs.level.hunter.%player%} is not set:
+		set {jobs.level.hunter.%player%} to 1
+	if {jobs.level.lumberjack.%player%} is not set:
+		set {jobs.level.lumberjack.%player%} to 1
+	if {jobs.level.excavator.%player%} is not set:
+		set {jobs.level.excavator.%player%} to 1
+	if {jobs.level.enchanter.%player%} is not set:
+		set {jobs.level.enchanter.%player%} to 1
+	if {jobs.bonus.%player%} is not set:
+		set {jobs.bonus.%player%} to 1
+
 
