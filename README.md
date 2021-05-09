@@ -5,4 +5,4 @@ CF.sk:
 - A simple script for having coinflips between players
 
 Jobs.sk: 
-- Currently working on a jobs script for 1.16. This is will pay players money for "working"
+- A jobs script for your minecraft server! Includes 6 Jobs (Miner, Farmer, Hunter, Lumberjack, Excavator and Enchanter!) Players will be paid money for each action they do
