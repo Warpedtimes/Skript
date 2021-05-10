@@ -489,4 +489,6 @@ on join:
 		set {jobs.bonus.%player%} to 1
 	if {jobs.%player%.max} is not set:
 		set {jobs.%player%.max} to {@maxJobsDefault}
+	if {jobs.amount.%{_p}%} is not set:
+		set {jobs.amount.%{_p}%} to 0
 
