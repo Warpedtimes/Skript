@@ -491,5 +491,9 @@ on join:
 		set {jobs.%player%.max} to {@maxJobsDefault}
 	if {jobs.amount.%player%} is not set:
 		set {jobs.amount.%player%} to 0
-	
+
+on load:
+	set {jobs.list::*} to "miner" and "farmer" and "hunter" and "lumberjack" and "excavator" and "enchanter"
+
+
 
