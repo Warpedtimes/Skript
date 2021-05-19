@@ -1,4 +1,126 @@
+
+#Takes quest data and sets it for the day
+function setQuest(id: number, questID: number, name: text, action: text, actionNum: number, actionEvent: text, money: number, crowns: number):
+	set {Quest.%{_id}%.questID} to {_questID}
+	set {Quest.%{_id}%.name} to {_name}
+	set {Quest.%{_id}%.action} to {_action}
+	set {Quest.%{_id}%.actionNum} to {_actionNum}
+	set {Quest.%{_id}%.actionEvent} to {_actionEvent}
+	set {Quest.%{_id}%.money} to {_money}
+	set {Quest.%{_id}%.crowns} to {_crowns}
+
+command questing:
+	trigger:
+		set {Quests.nextDay} to now
+		set {Quests.nextWeek} to now
+		add 1 day to {Quests.nextDay}
+		add 7 days to {Quests.nextWeek}
+		questReselect()
+		wait 10 ticks
+		questsMenu(player)
+
+command quests:
+	aliases: q, quest
+	trigger:
+		questsMenu(player)
+
+
+every 24 hours:
+	set {time} to now
+	add 1 day to {time}
+	questReselect()
+
+every 7 days:
+	set {Quests.nextWeek} to now
+	add 7 days to {Quests.nextWeek}
+	questReselect()
+
+
+function dailyQuestBegin(p: player, id: number):
+	set {_questID} to {Quest.%{_id}%.questID}
+
+	if {_questID} < 200:
+		if {_questID} is 101:
+			message "&aStarted Mining Quest" to {_p}
+		
+	else if {_questID} is 201:
+		message "&aStarted Killing Quest" to {_p}
+
+	else if {_questID} is 301:
+		message "&aStarted Jumping Quest" to {_p}
+
+
+	set {Quest.active.%{_id}%.%{_p}%} to true
+	set {Quest.active.%{_id}%.%{_questID}%.%{_p}%} to true
+	add {_p} to {Quest.users::*}
+
+function questProgress(p: player, id: number):
+	set {_questID} to {Quest.%{_id}%.questID}
+	add 1 to {Quest.progress.%{_id}%.%{_p}%}
+	if {Quest.progress.%{_id}%.%{_p}%} >= {Quest.%{_id}%.actionNum}:
+		questCompleted({_p},{_id})
+
+function questProgressValue(p: player, id: number, value: number):
+	set {_questID} to {Quest.%{_id}%.questID}
+	add {_value} to {Quest.progress.%{_id}%.%{_p}%}
+	if {Quest.progress.%{_id}%.%{_p}%} >= {Quest.%{_id}%.actionNum}:
+		questCompleted({_p},{_id})
+		
+
+function questCompleted(p: player, id: number):
+	set {_questID} to {Quest.%{_id}%.questID}
+	set {Quest.active.%{_id}%.%{_p}%} to false
+	set {Quest.active.%{_id}%.%{_questID}%.%{_p}%} to false
+	add {Quest.%{_id}%.money} to {_p}'s balance
+	set {_uuid} to uuid of {_p}
+	add {Quest.%{_id}%.crowns} to {crows::%{_uuid}%}
+	add {_p} to {Quest.toBeReset::*}
+	remove {_p} from {Quest.users::*}
+	send title "&6Quest Completed" with subtitle "%{Quest.%{_id}%.name}%" to {_p}
+
+function questReset():
+	loop {Quest.users::*}:
+		wait 1 tick
+
+		set {Quest.active.1.%loop-value%} to false
+		set {Quest.active.2.%loop-value%} to false
+		set {Quest.active.3.%loop-value%} to false
+		wait 1 tick
+
+		set {_questID} to {Quest.1.questID}
+		set {Quest.active.1.%{_questID}%.%loop-value%} to false
+
+		set {_questID} to {Quest.2.questID}
+		set {Quest.active.2.%{_questID}%.%loop-value%} to false
+
+		set {_questID} to {Quest.3.questID}
+		set {Quest.active.3.%{_questID}%.%loop-value%} to false
+
+		remove loop-value from {Quest.users::*}
+
+	loop {Quest.toBeReset::*}:
+		wait 1 tick
+		set {Quest.progress.1.%loop-value%} to 0
+		set {Quest.progress.2.%loop-value%} to 0
+		set {Quest.progress.3.%loop-value%} to 0
+
+on join:
+	if {Quest.active.1.%player%} is not set:
+		set {Quest.active.1.%player%} to false
+		set {Quest.active.2.%player%} to false
+		set {Quest.active.3.%player%} to false
+		set {Quest.progress.1.%player%} to 0
+		set {Quest.progress.2.%player%} to 0
+		set {Quest.progress.3.%player%} to 0
+		set {Quest.progress.4.%player%} to 0
+		set {Quest.progress.5.%player%} to 0
+		set {Quest.progress.6.%player%} to 0
+
+
 #QUEST LIST:
+
+
+#Daily Quests
 #Quest ID 1: Job Related Quests (exc Hunter). 101-200 (_random1)
 #Quest ID 2: Hunting Related Quests. 201-300 		  (_random2)
 #Quest ID 3: Misc Quests. 301-400 					  (_random3)
@@ -11,9 +133,7 @@ function questReselect():
 	set {_random3} to a random integer between 1 and 6
 
 	#Select Daily Quest 1
-	broadcast "%{_random1}%"
-	broadcast "%{_random2}%"
-	broadcast "%{_random3}%"
+
 
 	#Mining Related 101-102
 	if {_random1} = 1:
@@ -126,77 +246,356 @@ function questReselect():
 		setQuest(3,306,"&eEating Quest","eat",30,"bread",20,1)
 
 
-#Takes quest data and sets it for the day
-function setQuest(id: number, questID: number, name: text, action: text, actionNum: number, actionEvent: text, money: number, crowns: number):
-	set {dailyQuest.%{_id}%.questID} to {_questID}
-	set {dailyQuest.%{_id}%.name} to {_name}
-	set {dailyQuest.%{_id}%.action} to {_action}
-	set {dailyQuest.%{_id}%.actionNum} to {_actionNum}
-	set {dailyQuest.%{_id}%.actionEvent} to {_actionEvent}
-	set {dailyQuest.%{_id}%.money} to {_money}
-	set {dailyQuest.%{_id}%.crowns} to {_crowns}
-
-command questing:
-	trigger:
-		questReselect()
-		wait 10 ticks
-		GUI(player)
+#WeeklyQuests
+#Quest ID 4: Crate Quests. 101-200 							(_random4)
+#Quest ID 5: Boss Killing Quest. 201-300 					(_random5)
+#Quest ID 6: Huge Effort Quest (Lots of something). 301-400 (_random6)
 
 
-command q:
-	trigger:
-		GUI(player)
+	set {_random4} to a random integer between 1 and 3
+	set {_random5} to a random integer between 1 and 3
+	set {_random6} to a random integer between 1 and 3
 
-function GUI(p: player):
-	create a gui with virtual chest inventory with 4 rows named "          &8&nDaily Quests":
+	#Select Weekly Quest 1
 
-		#QUEST 1
-		if {dailyQuest.active.1.%{_p}%} is not true:
-			if {dailyQuest.progress.1.%{_p}%} < {dailyQuest.1.actionNum}:
-				make gui slot 11 with thing banner pattern named {dailyQuest.1.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.1.action} in proper case% %{dailyQuest.1.actionNum}% %{dailyQuest.1.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.1.money}% Coins" and "&8- &fx%{dailyQuest.1.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.1.%{_p}%}%/%{dailyQuest.1.actionNum}%" with nbt "{HideFlags:63}":
-					if {dailyQuest.progress.1.%{_p}%} < {dailyQuest.1.actionNum}:
-						if {dailyQuest.active.1.%{_p}%} is not true:
+	if {_random4} = 1:
+		setQuest(4,401,"&3Crate Quest","open",3,"gold crates",40,5)
+
+	else if {_random4} = 2:
+		setQuest(4,402,"&3Crate Quest","open",2,"diamond crates",50,5)
+
+	else if {_random4} = 3:
+		setQuest(4,403,"&3Crate Quest","open",1,"emerald crate",60,10)
+
+
+	#Select Weekly Quest 2
+
+	if {_random5} = 1:
+		setQuest(5,501,"&4Boss Slayer Quest","slay",1,"ender dragon",50,10)
+
+	else if {_random5} = 2:
+		setQuest(5,502,"&4Boss Slayer Quest","slay",3,"wither",50,10)
+
+	else if {_random5} = 3:
+		setQuest(5,503,"&4Boss Slayer Quest","slay",3,"elder guardians",50,10)
+
+
+	#Select Weekly Quest 3
+
+	if {_random6} = 1:
+		setQuest(6,601,"&6Godly Quest","deliever",1,"divine scroll",50,10)
+
+	else if {_random6} = 2:
+		setQuest(6,502,"&6Holy Quest","deliever",5,"demon cores",50,10)
+
+	else if {_random6} = 3:
+		setQuest(6,503,"&6Cursed Quest","deliever",5,"angle cores",50,10)
+
+#Quest Events
+
+#Quest ID 1
+
+on mine of any ore or ancient debris or stone or andesite or granite or diorite or blackstone:	
+	if event-block is any ore or ancient debris:
+		if {Quest.active.1.101.%player%} is true:
+			questProgress(player,1)
+	else:
+		if {Quest.active.1.102.%player%} is true:
+			questProgress(player,1)
+
+on break:
+	if event-block is fully grown wheat plant:
+		if {Quest.active.1.103.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is fully grown carrot plant:
+		if {Quest.active.1.104.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is fully grown potato plant:
+		if {Quest.active.1.105.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is fully grown beetroot plant:
+		if {Quest.active.1.106.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is ripe cocoa plant:
+		if {Quest.active.1.108.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is melon or pumpkin:
+		if {Quest.active.1.109.%player%} is true:
+			questProgress(player,1)
+
+on break:
+	if event-block is oak log:
+		if {Quest.active.1.110.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is spruce log:
+		if {Quest.active.1.111.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is birch log:
+		if {Quest.active.1.112.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is jungle log:
+		if {Quest.active.1.113.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is acacia log:
+		if {Quest.active.1.114.%player%} is true:
+			questProgress(player,1)
+
+	else if event-block is dark oak log:
+		if {Quest.active.1.115.%player%} is true:
+			questProgress(player,1)
+
+#Quest ID 2
+on death:
+	if victim is player:
+		if attacker != victim:
+			if {Quest.active.2.201.%attacker%} is true:
+				questProgress(attacker,2)
+
+	else if victim is cow or sheep or chicken or pig or rabbit:
+		if {Quest.active.2.202.%attacker%} is true:
+			questProgress(attacker,2)
+
+	else if victim is zombie or drowned or husk:
+		if {Quest.active.2.203.%attacker%} is true:
+			questProgress(attacker,2)
+
+	else if victim is skeleton or stray or wither skeleton:
+		if {Quest.active.2.204.%attacker%} is true:
+			questProgress(attacker,2)
+
+	else if victim is spider or cave spider:
+		if {Quest.active.2.205.%attacker%} is true:
+			questProgress(attacker,2)
+			
+	else if victim is creeper:
+		if {Quest.active.2.206.%attacker%} is true:
+			questProgress(attacker,2)
+
+	else if victim is guardian:
+		if {Quest.active.2.207.%attacker%} is true:
+			questProgress(attacker,2)
+			
+	else if victim is magma cube:
+		if {Quest.active.2.208.%attacker%} is true:
+			questProgress(attacker,2)
+
+	else if victim is blaze:
+		if {Quest.active.2.209.%attacker%} is true:
+			questProgress(attacker,2)
+
+#Quest ID 3
+on jump:
+	if {Quest.active.3.301.%player%} is true:
+		questProgress(player,3)
+
+on craft:
+	if {Quest.active.3.302.%player%} is true:
+		questProgress(player,3)
+
+on death:
+	if {Quest.active.3.303.%victim%} is true:
+		questProgress(victim,3)
+
+on damage:
+	if {Quest.active.3.304.%attacker%} is true:
+		questProgressValue(attacker,3,damage)
+
+on enchant:
+	if {Quest.active.3.305.%player%} is true:
+		questProgress(player,3)
+
+on consume of bread:
+	if {Quest.active.3.306.%player%} is true:
+		questProgress(player,3)
+
+
+function questsMenu(p: player):
+	set {_differenceDaily} to difference between {Quests.nextDay} and now
+	set {_differenceWeekly} to difference between {Quests.nextWeek} and now
+	wait 1 tick
+	create a gui with id "quests" with virtual chest inventory with 1 rows named "                &8&nQuests":
+		make gui slot 0 with lectern of power 1 named "&aQuests" with lore "&fADD LORE HERE" with nbt "{HideFlags:63}"
+
+		make gui slot 3 with writable book of power 1 named "&2Daily Quests" with lore "&aHere you can view daily" and "&aquests and your progress." and "" and "&2&l| &fResets: &2%{_differenceDaily}%" and "" and "&2>> Click to browse quests!" with nbt "{HideFlags:63}":
+			dailyQuestsMenu(player)
+
+		make gui slot 5 with writable book of power 1 named "&5Weekly Quests" with lore "&dHere you can view weekly" and "&dquests and your progress." and "" and "&5&l| &fResets: &5%{_differenceWeekly}%" and "" and "&5>> Click to browse quests!" with nbt "{HideFlags:63}":
+			weeklyQuestsMenu(player)
+
+	open gui last gui to {_p}
+
+
+function weeklyQuestsMenu(p: player):
+	create a gui with virtual chest inventory with 4 rows named "         &8&nWeekly Quests":
+		make gui slot 31 with barrier named "&cBack?":
+			questsMenu({_p})
+
+		#QUEST 4
+		if {Quest.active.4.%{_p}%} is not true:
+			if {Quest.progress.4.%{_p}%} < {Quest.4.actionNum}:
+				make gui slot 11 with chest named {Quest.4.name} with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.4.action} in proper case% %{Quest.4.actionNum}% %{Quest.4.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.4.money}% Coins" and "&8- &fx%{Quest.4.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.4.%{_p}%}%/%{Quest.4.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.4.%{_p}%} < {Quest.4.actionNum}:
+						if {Quest.active.4.%{_p}%} is not true:
 							dailyQuestBegin({_p},1)
-							GUI(player)
+							dailyQuestsMenu(player)
 						else:
 							message "&cQuest Already Active"
 					else:
 						message "&cQuest Already Completeted"
 
 			else:
-				make gui slot 11 with thing banner pattern of power 1 named "%{dailyQuest.1.name}% &7(COMPLETED)" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.1.action} in proper case% %{dailyQuest.1.actionNum}% %{dailyQuest.1.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.1.money}% Coins" and "&8- &fx%{dailyQuest.1.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.1.%{_p}%}%/%{dailyQuest.1.actionNum}%" with nbt "{HideFlags:63}":
-					if {dailyQuest.progress.1.%{_p}%} < {dailyQuest.1.actionNum}:
-						if {dailyQuest.active.1.%{_p}%} is not true:
+				make gui slot 11 with chest of power 1 named "%{Quest.4.name}% &7(COMPLETED)" with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.4.action} in proper case% %{Quest.4.actionNum}% %{Quest.4.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.4.money}% Coins" and "&8- &fx%{Quest.4.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.4.%{_p}%}%/%{Quest.4.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.4.%{_p}%} < {Quest.4.actionNum}:
+						if {Quest.active.4.%{_p}%} is not true:
 							dailyQuestBegin({_p},1)
-							GUI(player)
+							dailyQuestsMenu(player)
 						else:
 							message "&cQuest Already Active"
 					else:
 						message "&cQuest Already Completeted"
 
-		else if {dailyQuest.active.1.%{_p}%} is true:
-			make gui slot 11 with thing banner pattern of power 1 named {dailyQuest.1.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.1.action} in proper case% %{dailyQuest.1.actionNum}% %{dailyQuest.1.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.1.money}% Coins" and "&8- &fx%{dailyQuest.1.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.1.%{_p}%}%/%{dailyQuest.1.actionNum}%" with nbt "{HideFlags:63}":
-				if {dailyQuest.progress.1.%{_p}%} < {dailyQuest.1.actionNum}:
-					if {dailyQuest.active.1.%{_p}%} is not true:
+		else if {Quest.active.4.%{_p}%} is true:
+			make gui slot 11 with chest of power 1 named {Quest.4.name} with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.4.action} in proper case% %{Quest.4.actionNum}% %{Quest.4.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.4.money}% Coins" and "&8- &fx%{Quest.4.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.4.%{_p}%}%/%{Quest.4.actionNum}%" with nbt "{HideFlags:63}":
+				if {Quest.progress.4.%{_p}%} < {Quest.4.actionNum}:
+					if {Quest.active.4.%{_p}%} is not true:
 						dailyQuestBegin({_p},1)
-						GUI(player)
+						dailyQuestsMenu(player)
+					else:
+						message "&cQuest Already Active"
+				else:
+					message "&cQuest Already Completeted"
+
+		#QUEST 5
+		if {Quest.active.5.%{_p}%} is not true:
+			if {Quest.progress.5.%{_p}%} < {Quest.5.actionNum}:
+				make gui slot 13 with end crystal named {Quest.5.name} with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.5.action} in proper case% %{Quest.5.actionNum}% %{Quest.5.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.5.money}% Coins" and "&8- &fx%{Quest.5.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.5.%{_p}%}%/%{Quest.5.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.5.%{_p}%} < {Quest.5.actionNum}:
+						if {Quest.active.5.%{_p}%} is not true:
+							dailyQuestBegin({_p},2)
+							dailyQuestsMenu(player)
+						else:
+							message "&cQuest Already Active"
+					else:
+						message "&cQuest Already Completeted"
+
+
+			else:
+				make gui slot 13 with end crystal of power 1 named "%{Quest.5.name}% &7(COMPLETED)" with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.5.action} in proper case% %{Quest.5.actionNum}% %{Quest.5.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.5.money}% Coins" and "&8- &fx%{Quest.5.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.5.%{_p}%}%/%{Quest.5.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.5.%{_p}%} < {Quest.5.actionNum}:
+						if {Quest.active.5.%{_p}%} is not true:
+							dailyQuestBegin({_p},2)
+							dailyQuestsMenu(player)
+						else:
+							message "&cQuest Already Active"
+					else:
+						message "&cQuest Already Completeted"
+
+		else if {Quest.active.5.%{_p}%} is true:
+			make gui slot 13 with end crystal of power 1 named {Quest.5.name} with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.5.action} in proper case% %{Quest.5.actionNum}% %{Quest.5.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.5.money}% Coins" and "&8- &fx%{Quest.5.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.5.%{_p}%}%/%{Quest.5.actionNum}%" with nbt "{HideFlags:63}":
+				if {Quest.progress.5.%{_p}%} < {Quest.5.actionNum}:
+					if {Quest.active.5.%{_p}%} is not true:
+						dailyQuestBegin({_p},2)
+						dailyQuestsMenu(player)
 					else:
 						message "&cQuest Already Active"
 				else:
 					message "&cQuest Already Completeted"
 
 
+		#QUEST 6
+		if {Quest.active.6.%{_p}%} is not true:
+			if {Quest.progress.6.%{_p}%} < {Quest.6.actionNum}:
+				make gui slot 15 with enchanted golden apple named {Quest.6.name} with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.6.action} in proper case% %{Quest.6.actionNum}% %{Quest.6.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.6.money}% Coins" and "&8- &fx%{Quest.6.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.6.%{_p}%}%/%{Quest.6.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.6.%{_p}%} < {Quest.6.actionNum}:
+						if {Quest.active.6.%{_p}%} is not true:
+							dailyQuestBegin({_p},3)
+							dailyQuestsMenu(player)
+						else:
+							message "&cQuest Already Active"
+					else:
+						message "&cQuest Already Completeted"
+
+			else:
+				make gui slot 15 with enchanted golden apple of power 1 named "%{Quest.6.name}% &7(COMPLETED)" with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.6.action} in proper case% %{Quest.6.actionNum}% %{Quest.6.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.6.money}% Coins" and "&8- &fx%{Quest.6.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.6.%{_p}%}%/%{Quest.6.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.6.%{_p}%} < {Quest.6.actionNum}:
+						if {Quest.active.6.%{_p}%} is not true:
+							dailyQuestBegin({_p},3)
+							dailyQuestsMenu(player)
+						else:
+							message "&cQuest Already Active"
+					else:
+						message "&cQuest Already Completeted"
 
 
+		else if {Quest.active.6.%{_p}%} is true:
+			make gui slot 15 with enchanted golden apple of power 1 named "%{Quest.6.name}%" with lore "&8Weekly Quest" and "" and "&6Task:" and "&8- &f%{Quest.6.action} in proper case% %{Quest.6.actionNum}% %{Quest.6.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.6.money}% Coins" and "&8- &fx%{Quest.6.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.6.%{_p}%}%/%{Quest.6.actionNum}%" with nbt "{HideFlags:63}":
+				if {Quest.progress.6.%{_p}%} < {Quest.6.actionNum}:
+					if {Quest.active.6.%{_p}%} is not true:
+						dailyQuestBegin({_p},3)
+						dailyQuestsMenu(player)
+					else:
+						message "&cQuest Already Active"
+				else:
+					message "&cQuest Already Completeted"
+
+	open gui last gui to {_p}
+
+
+function dailyQuestsMenu(p: player):
+	create a gui with virtual chest inventory with 4 rows named "          &8&nDaily Quests":
+
+		#QUEST 1
+		if {Quest.active.1.%{_p}%} is not true:
+			if {Quest.progress.1.%{_p}%} < {Quest.1.actionNum}:
+				make gui slot 11 with thing banner pattern named {Quest.1.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.1.action} in proper case% %{Quest.1.actionNum}% %{Quest.1.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.1.money}% Coins" and "&8- &fx%{Quest.1.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.1.%{_p}%}%/%{Quest.1.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.1.%{_p}%} < {Quest.1.actionNum}:
+						if {Quest.active.1.%{_p}%} is not true:
+							dailyQuestBegin({_p},1)
+							dailyQuestsMenu(player)
+						else:
+							message "&cQuest Already Active"
+					else:
+						message "&cQuest Already Completeted"
+
+			else:
+				make gui slot 11 with thing banner pattern of power 1 named "%{Quest.1.name}% &7(COMPLETED)" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.1.action} in proper case% %{Quest.1.actionNum}% %{Quest.1.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.1.money}% Coins" and "&8- &fx%{Quest.1.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.1.%{_p}%}%/%{Quest.1.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.1.%{_p}%} < {Quest.1.actionNum}:
+						if {Quest.active.1.%{_p}%} is not true:
+							dailyQuestBegin({_p},1)
+							dailyQuestsMenu(player)
+						else:
+							message "&cQuest Already Active"
+					else:
+						message "&cQuest Already Completeted"
+
+		else if {Quest.active.1.%{_p}%} is true:
+			make gui slot 11 with thing banner pattern of power 1 named {Quest.1.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.1.action} in proper case% %{Quest.1.actionNum}% %{Quest.1.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.1.money}% Coins" and "&8- &fx%{Quest.1.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.1.%{_p}%}%/%{Quest.1.actionNum}%" with nbt "{HideFlags:63}":
+				if {Quest.progress.1.%{_p}%} < {Quest.1.actionNum}:
+					if {Quest.active.1.%{_p}%} is not true:
+						dailyQuestBegin({_p},1)
+						dailyQuestsMenu(player)
+					else:
+						message "&cQuest Already Active"
+				else:
+					message "&cQuest Already Completeted"
 
 		#QUEST 2
-		if {dailyQuest.active.2.%{_p}%} is not true:
-			if {dailyQuest.progress.2.%{_p}%} < {dailyQuest.2.actionNum}:
-				make gui slot 13 with thing banner pattern named {dailyQuest.2.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.2.action} in proper case% %{dailyQuest.2.actionNum}% %{dailyQuest.2.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.2.money}% Coins" and "&8- &fx%{dailyQuest.2.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.2.%{_p}%}%/%{dailyQuest.2.actionNum}%" with nbt "{HideFlags:63}":
-					if {dailyQuest.progress.2.%{_p}%} < {dailyQuest.2.actionNum}:
-						if {dailyQuest.active.2.%{_p}%} is not true:
+		if {Quest.active.2.%{_p}%} is not true:
+			if {Quest.progress.2.%{_p}%} < {Quest.2.actionNum}:
+				make gui slot 13 with thing banner pattern named {Quest.2.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.2.action} in proper case% %{Quest.2.actionNum}% %{Quest.2.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.2.money}% Coins" and "&8- &fx%{Quest.2.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.2.%{_p}%}%/%{Quest.2.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.2.%{_p}%} < {Quest.2.actionNum}:
+						if {Quest.active.2.%{_p}%} is not true:
 							dailyQuestBegin({_p},2)
-							GUI(player)
+							dailyQuestsMenu(player)
 						else:
 							message "&cQuest Already Active"
 					else:
@@ -204,22 +603,22 @@ function GUI(p: player):
 
 
 			else:
-				make gui slot 13 with thing banner pattern of power 1 named "%{dailyQuest.2.name}% &7(COMPLETED)" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.2.action} in proper case% %{dailyQuest.2.actionNum}% %{dailyQuest.2.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.2.money}% Coins" and "&8- &fx%{dailyQuest.2.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.2.%{_p}%}%/%{dailyQuest.2.actionNum}%" with nbt "{HideFlags:63}":
-					if {dailyQuest.progress.2.%{_p}%} < {dailyQuest.2.actionNum}:
-						if {dailyQuest.active.2.%{_p}%} is not true:
+				make gui slot 13 with thing banner pattern of power 1 named "%{Quest.2.name}% &7(COMPLETED)" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.2.action} in proper case% %{Quest.2.actionNum}% %{Quest.2.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.2.money}% Coins" and "&8- &fx%{Quest.2.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.2.%{_p}%}%/%{Quest.2.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.2.%{_p}%} < {Quest.2.actionNum}:
+						if {Quest.active.2.%{_p}%} is not true:
 							dailyQuestBegin({_p},2)
-							GUI(player)
+							dailyQuestsMenu(player)
 						else:
 							message "&cQuest Already Active"
 					else:
 						message "&cQuest Already Completeted"
 
-		else if {dailyQuest.active.2.%{_p}%} is true:
-			make gui slot 13 with thing banner pattern of power 1 named {dailyQuest.2.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.2.action} in proper case% %{dailyQuest.2.actionNum}% %{dailyQuest.2.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.2.money}% Coins" and "&8- &fx%{dailyQuest.2.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.2.%{_p}%}%/%{dailyQuest.2.actionNum}%" with nbt "{HideFlags:63}":
-				if {dailyQuest.progress.2.%{_p}%} < {dailyQuest.2.actionNum}:
-					if {dailyQuest.active.2.%{_p}%} is not true:
+		else if {Quest.active.2.%{_p}%} is true:
+			make gui slot 13 with thing banner pattern of power 1 named {Quest.2.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.2.action} in proper case% %{Quest.2.actionNum}% %{Quest.2.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.2.money}% Coins" and "&8- &fx%{Quest.2.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.2.%{_p}%}%/%{Quest.2.actionNum}%" with nbt "{HideFlags:63}":
+				if {Quest.progress.2.%{_p}%} < {Quest.2.actionNum}:
+					if {Quest.active.2.%{_p}%} is not true:
 						dailyQuestBegin({_p},2)
-						GUI(player)
+						dailyQuestsMenu(player)
 					else:
 						message "&cQuest Already Active"
 				else:
@@ -227,255 +626,48 @@ function GUI(p: player):
 
 
 		#QUEST 3
-		if {dailyQuest.active.3.%{_p}%} is not true:
-			if {dailyQuest.progress.3.%{_p}%} < {dailyQuest.3.actionNum}:
-				make gui slot 15 with thing banner pattern named {dailyQuest.3.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.3.action} in proper case% %{dailyQuest.3.actionNum}% %{dailyQuest.3.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.3.money}% Coins" and "&8- &fx%{dailyQuest.3.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.3.%{_p}%}%/%{dailyQuest.3.actionNum}%" with nbt "{HideFlags:63}":
-					if {dailyQuest.progress.3.%{_p}%} < {dailyQuest.3.actionNum}:
-						if {dailyQuest.active.3.%{_p}%} is not true:
+		if {Quest.active.3.%{_p}%} is not true:
+			if {Quest.progress.3.%{_p}%} < {Quest.3.actionNum}:
+				make gui slot 15 with thing banner pattern named {Quest.3.name} with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.3.action} in proper case% %{Quest.3.actionNum}% %{Quest.3.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.3.money}% Coins" and "&8- &fx%{Quest.3.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.3.%{_p}%}%/%{Quest.3.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.3.%{_p}%} < {Quest.3.actionNum}:
+						if {Quest.active.3.%{_p}%} is not true:
 							dailyQuestBegin({_p},3)
-							GUI(player)
+							dailyQuestsMenu(player)
 						else:
 							message "&cQuest Already Active"
 					else:
 						message "&cQuest Already Completeted"
 
 			else:
-				make gui slot 15 with thing banner pattern of power 1 named "%{dailyQuest.3.name}% &7(COMPLETED)" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.3.action} in proper case% %{dailyQuest.3.actionNum}% %{dailyQuest.3.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.3.money}% Coins" and "&8- &fx%{dailyQuest.3.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.3.%{_p}%}%/%{dailyQuest.3.actionNum}%" with nbt "{HideFlags:63}":
-					if {dailyQuest.progress.3.%{_p}%} < {dailyQuest.3.actionNum}:
-						if {dailyQuest.active.3.%{_p}%} is not true:
+				make gui slot 15 with thing banner pattern of power 1 named "%{Quest.3.name}% &7(COMPLETED)" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.3.action} in proper case% %{Quest.3.actionNum}% %{Quest.3.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.3.money}% Coins" and "&8- &fx%{Quest.3.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.3.%{_p}%}%/%{Quest.3.actionNum}%" with nbt "{HideFlags:63}":
+					if {Quest.progress.3.%{_p}%} < {Quest.3.actionNum}:
+						if {Quest.active.3.%{_p}%} is not true:
 							dailyQuestBegin({_p},3)
-							GUI(player)
+							dailyQuestsMenu(player)
 						else:
 							message "&cQuest Already Active"
 					else:
 						message "&cQuest Already Completeted"
 
 
-		else if {dailyQuest.active.3.%{_p}%} is true:
-			make gui slot 15 with thing banner pattern of power 1 named "%{dailyQuest.3.name}%" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{dailyQuest.3.action} in proper case% %{dailyQuest.3.actionNum}% %{dailyQuest.3.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{dailyQuest.3.money}% Coins" and "&8- &fx%{dailyQuest.3.crowns}% Crowns" and "" and "&7Progress: &f%{dailyQuest.progress.3.%{_p}%}%/%{dailyQuest.3.actionNum}%" with nbt "{HideFlags:63}":
-				if {dailyQuest.progress.3.%{_p}%} < {dailyQuest.3.actionNum}:
-					if {dailyQuest.active.3.%{_p}%} is not true:
+		else if {Quest.active.3.%{_p}%} is true:
+			make gui slot 15 with thing banner pattern of power 1 named "%{Quest.3.name}%" with lore "&8Daily Quest" and "" and "&6Task:" and "&8- &f%{Quest.3.action} in proper case% %{Quest.3.actionNum}% %{Quest.3.actionEvent} in proper case% " and "" and "&6Reward:" and "&8- &f$%{Quest.3.money}% Coins" and "&8- &fx%{Quest.3.crowns}% Crowns" and "" and "&7Progress: &f%{Quest.progress.3.%{_p}%}%/%{Quest.3.actionNum}%" with nbt "{HideFlags:63}":
+				if {Quest.progress.3.%{_p}%} < {Quest.3.actionNum}:
+					if {Quest.active.3.%{_p}%} is not true:
 						dailyQuestBegin({_p},3)
-						GUI(player)
+						dailyQuestsMenu(player)
 					else:
 						message "&cQuest Already Active"
 				else:
 					message "&cQuest Already Completeted"
 
+		make gui slot 31 with barrier named "&cBack?":
+			questsMenu({_p})
 
 	open gui last gui to {_p}
 
 
-function dailyQuestBegin(p: player, id: number):
-	set {_questID} to {dailyQuest.%{_id}%.questID}
-
-	if {_questID} < 200:
-		if {_questID} is 101:
-			message "&aStarted Mining Quest" to {_p}
-		
-	else if {_questID} is 201:
-		message "&aStarted Killing Quest" to {_p}
-
-	else if {_questID} is 301:
-		message "&aStarted Jumping Quest" to {_p}
 
 
-	set {dailyQuest.active.%{_id}%.%{_p}%} to true
-	set {dailyQuest.active.%{_id}%.%{_questID}%.%{_p}%} to true
-	add {_p} to {dailyQuest.users::*}
-
-function questProgress(p: player, id: number):
-	set {_questID} to {dailyQuest.%{_id}%.questID}
-	add 1 to {dailyQuest.progress.%{_id}%.%{_p}%}
-	if {dailyQuest.progress.%{_id}%.%{_p}%} >= {dailyQuest.%{_id}%.actionNum}:
-		set {dailyQuest.active.%{_id}%.%{_p}%} to false
-		set {dailyQuest.active.%{_id}%.%{_questID}%.%{_p}%} to false
-		add {_p} to {dailyQuest.toBeReset::*}
-		remove {_p} from {dailyQuest.users::*}
-		send title "&6Quest Completed" with subtitle "QUEST" to {_p}
-
-function questProgressValue(p: player, id: number, value: number):
-	set {_questID} to {dailyQuest.%{_id}%.questID}
-	add {_value} to {dailyQuest.progress.%{_id}%.%{_p}%}
-	if {dailyQuest.progress.%{_id}%.%{_p}%} >= {dailyQuest.%{_id}%.actionNum}:
-		set {dailyQuest.active.%{_id}%.%{_p}%} to false
-		set {dailyQuest.active.%{_id}%.%{_questID}%.%{_p}%} to false
-		add {_p} to {dailyQuest.toBeReset::*}
-		remove {_p} from {dailyQuest.users::*}
-		send title "&6Quest Completed" with subtitle "QUEST" to {_p}
-
-command reset:
-	trigger:
-		set {dailyQuest.active.1.%player%} to false
-		set {dailyQuest.active.2.%player%} to false
-		set {dailyQuest.active.3.%player%} to false
-
-command 22:
-	trigger:
-		loop {dailyQuest.users::*}:
-			message "%loop-value%"
-
-function questReset():
-	loop {dailyQuest.users::*}:
-		wait 1 tick
-
-		set {dailyQuest.active.1.%loop-value%} to false
-		set {dailyQuest.active.2.%loop-value%} to false
-		set {dailyQuest.active.3.%loop-value%} to false
-		wait 1 tick
-
-		set {_questID} to {dailyQuest.1.questID}
-		set {dailyQuest.active.1.%{_questID}%.%loop-value%} to false
-
-		set {_questID} to {dailyQuest.2.questID}
-		set {dailyQuest.active.2.%{_questID}%.%loop-value%} to false
-
-		set {_questID} to {dailyQuest.3.questID}
-		set {dailyQuest.active.3.%{_questID}%.%loop-value%} to false
-
-		remove loop-value from {dailyQuest.users::*}
-
-	loop {dailyQuest.toBeReset::*}:
-		wait 1 tick
-		set {dailyQuest.progress.1.%loop-value%} to 0
-		set {dailyQuest.progress.2.%loop-value%} to 0
-		set {dailyQuest.progress.3.%loop-value%} to 0
-
-on join:
-	set {dailyQuest.progress.1.%player%} to 0
-	set {dailyQuest.progress.2.%player%} to 0
-	set {dailyQuest.progress.3.%player%} to 0
-
-command cows:
-	trigger:
-		loop 100 times:
-			make player execute command "summon cow"
 
 
-#Quest Actions
-
-#Quest ID 1
-
-on mine of any ore or ancient debris or stone or andesite or granite or diorite or blackstone:	
-	if event-block is any ore or ancient debris:
-		if {dailyQuest.active.1.101.%player%} is true:
-			questProgress(player,1)
-	else:
-		if {dailyQuest.active.1.102.%player%} is true:
-			questProgress(player,1)
-
-on break:
-	if event-block is fully grown wheat plant:
-		if {dailyQuest.active.1.103.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is fully grown carrot plant:
-		if {dailyQuest.active.1.104.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is fully grown potato plant:
-		broadcast "cum"
-		if {dailyQuest.active.1.105.%player%} is true:
-			broadcast "piss"
-			questProgress(player,1)
-
-	else if event-block is fully grown beetroot plant:
-		if {dailyQuest.active.1.106.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is ripe cocoa plant:
-		if {dailyQuest.active.1.108.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is melon or pumpkin:
-		if {dailyQuest.active.1.109.%player%} is true:
-			questProgress(player,1)
-
-on break:
-	if event-block is oak log:
-		if {dailyQuest.active.1.110.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is spruce log:
-		if {dailyQuest.active.1.111.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is birch log:
-		if {dailyQuest.active.1.112.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is jungle log:
-		if {dailyQuest.active.1.113.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is acacia log:
-		if {dailyQuest.active.1.114.%player%} is true:
-			questProgress(player,1)
-
-	else if event-block is dark oak log:
-		if {dailyQuest.active.1.115.%player%} is true:
-			questProgress(player,1)
-
-#Quest ID 2
-on death:
-	if victim is player:
-		if attacker != victim:
-			if {dailyQuest.active.2.201.%attacker%} is true:
-				questProgress(attacker,2)
-
-	else if victim is cow or sheep or chicken or pig or rabbit:
-		if {dailyQuest.active.2.202.%attacker%} is true:
-			questProgress(attacker,2)
-
-	else if victim is zombie or drowned or husk:
-		if {dailyQuest.active.2.203.%attacker%} is true:
-			questProgress(attacker,2)
-
-	else if victim is skeleton or stray or wither skeleton:
-		if {dailyQuest.active.2.204.%attacker%} is true:
-			questProgress(attacker,2)
-
-	else if victim is spider or cave spider:
-		if {dailyQuest.active.2.205.%attacker%} is true:
-			questProgress(attacker,2)
-			
-	else if victim is creeper:
-		if {dailyQuest.active.2.206.%attacker%} is true:
-			questProgress(attacker,2)
-
-	else if victim is guardian:
-		if {dailyQuest.active.2.207.%attacker%} is true:
-			questProgress(attacker,2)
-			
-	else if victim is magma cube:
-		if {dailyQuest.active.2.208.%attacker%} is true:
-			questProgress(attacker,2)
-
-	else if victim is blaze:
-		if {dailyQuest.active.2.209.%attacker%} is true:
-			questProgress(attacker,2)
-
-#Quest ID 3
-on jump:
-	if {dailyQuest.active.3.301.%player%} is true:
-		questProgress(player,3)
-
-on craft:
-	if {dailyQuest.active.3.302.%player%} is true:
-		questProgress(player,3)
-
-on death:
-	if {dailyQuest.active.3.303.%victim%} is true:
-		questProgress(victim,3)
-
-on damage:
-	if {dailyQuest.active.3.304.%attacker%} is true:
-		questProgressValue(attacker,3,damage)
-
-on enchant:
-	if {dailyQuest.active.3.305.%player%} is true:
-		questProgress(player,3)
-
-on consume of bread:
-	if {dailyQuest.active.3.306.%player%} is true:
-		questProgress(player,3)
