@@ -142,7 +142,16 @@ function jobsLeave(p: player, job: text):
 		remove 1 from {jobs.amount.%{_p}%}
 		set {jobs.is%{_job}%.%{_p}%} to false
 		#Removes the set amount of XP from the job
-		set {jobs.xp.%{_job}%.%{_p}%} to {jobs.xp.%{_job}%.%{_p}%} * {@keepXP}
+		if {jobs.level.%{_job}%.%{_p}%} <= 1:
+			set {_keptXP} to (({jobs.level.%{_job}%.%{_p}%} * 5000) + {jobs.xp.%{_job}%.%{_p}%}) * {@keepXP}
+			set {_keptLVL} to {_keptXP} / 5000
+			set {jobs.level.%{_job}%.%{_p}%} to floor({_keptLVL})
+			set {jobs.xp.%{_job}%.%{_p}%} to ({_keptLVL} - {jobs.level.%{_job}%.%{_p}%}) * 5000
+		else:
+			if {jobs.xp.%{_job}%.%{_p}%} > 0:
+				set {jobs.xp.%{_job}%.%{_p}%} to {jobs.xp.%{_job}%.%{_p}%} * {@keepXP}
+
+
 		message "{@prefix} &aYou are no longer a %jobName({_job})% &7(-20%% Job XP)" to {_p}
 		soundsNo({_p})
 		stop
@@ -188,7 +197,7 @@ function jobsStats(p: player):
 		if {jobs.xp.%loop-value%.%{_p}%} is not set:
 			set {jobs.xp.%loop-value%.%{_p}%} to 0
 		set {_jobName} to jobName(loop-value)
-		message "%{_jobName}%: Level: %{jobs.level.%loop-value%.%{_p}%}% &7(%{jobs.xp.%loop-value%.%{_p}%}%/&7%{jobs.level.%loop-value%.%{_p}%}*500+({jobs.level.%loop-value%.%{_p}%}-1)*500%&7)" to {_p}
+		message "%{_jobName}%: Level: %{jobs.level.%loop-value%.%{_p}%}% &7(%{jobs.xp.%loop-value%.%{_p}%}%/&75,000)" to {_p}
 	message "-----{@prefix}-----" to {_p}
 	message "" to {_p}
 
@@ -198,12 +207,12 @@ function wage(p: player,pay: number,job: text):
 	add {_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)) to {_p}'s balance
 	if {jobs.level.%{_job}%.%{_p}%} < {@maxLevel}:
 		add {_pay}*10 to {jobs.xp.%{_job}%.%{_p}%}
-		if {jobs.xp.%{_job}%.%{_p}%} >= {jobs.level.%{_job}%.%{_p}%}*500+({jobs.level.%{_job}%.%{_p}%}-1)*500:
+		if {jobs.xp.%{_job}%.%{_p}%} >= 5000:
 			send title "%jobName({_job})% &6Level Up!" with subtitle "&7%({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)*100)%%% &f-> &7%({@levelBonus}*{jobs.level.%{_job}%.%{_p}%})*100%%%" to {_p}
 			soundsLevelUp({_p})
 			set {jobs.xp.%{_job}%.%{_p}%} to 0
 			add 1 to {jobs.level.%{_job}%.%{_p}%}
-		send action bar "&6+ $%regex({_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)))%&F | &3 xp (%regex({jobs.xp.%{_job}%.%{_p}%})%&7/&3%regex({jobs.level.%{_job}%.%{_p}%}*500+({jobs.level.%{_job}%.%{_p}%}-1)*500)%&3)" to {_p}
+		send action bar "&6+ $%regex({_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)))%&F | &3 xp (%regex({jobs.xp.%{_job}%.%{_p}%})%&7/&35,000)" to {_p}
 	else:
 		send action bar "&6+ $%regex({_pay}*{jobs.bonus.%{_p}%}+{_pay}*({@levelBonus}*({jobs.level.%{_job}%.%{_p}%}-1)))%&F | &3 xp (&7MAX LEVEL)" to {_p}
 	soundsPay({_p})
