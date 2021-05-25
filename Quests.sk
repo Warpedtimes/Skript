@@ -26,8 +26,8 @@ command quests:
 
 
 every 24 hours:
-	set {time} to now
-	add 1 day to {time}
+	set {Quests.nextDay} to now
+	add 1 day to {Quests.nextDay}
 	questReselect()
 
 every 7 days:
@@ -85,6 +85,9 @@ function questReset():
 		set {Quest.active.1.%loop-value%} to false
 		set {Quest.active.2.%loop-value%} to false
 		set {Quest.active.3.%loop-value%} to false
+		set {Quest.active.4.%loop-value%} to false
+		set {Quest.active.5.%loop-value%} to false
+		set {Quest.active.6.%loop-value%} to false
 		wait 1 tick
 
 		set {_questID} to {Quest.1.questID}
@@ -96,6 +99,15 @@ function questReset():
 		set {_questID} to {Quest.3.questID}
 		set {Quest.active.3.%{_questID}%.%loop-value%} to false
 
+		set {_questID} to {Quest.4.questID}
+		set {Quest.active.4.%{_questID}%.%loop-value%} to false
+
+		set {_questID} to {Quest.5.questID}
+		set {Quest.active.5.%{_questID}%.%loop-value%} to false
+
+		set {_questID} to {Quest.6.questID}
+		set {Quest.active.6.%{_questID}%.%loop-value%} to false
+
 		remove loop-value from {Quest.users::*}
 
 	loop {Quest.toBeReset::*}:
@@ -103,6 +115,9 @@ function questReset():
 		set {Quest.progress.1.%loop-value%} to 0
 		set {Quest.progress.2.%loop-value%} to 0
 		set {Quest.progress.3.%loop-value%} to 0
+		set {Quest.progress.4.%loop-value%} to 0
+		set {Quest.progress.5.%loop-value%} to 0
+		set {Quest.progress.6.%loop-value%} to 0
 
 on join:
 	if {Quest.active.1.%player%} is not set:
@@ -286,10 +301,10 @@ function questReselect():
 		setQuest(6,601,"&6Godly Quest","deliever",1,"divine scroll",50,10)
 
 	else if {_random6} = 2:
-		setQuest(6,502,"&6Holy Quest","deliever",5,"demon cores",50,10)
+		setQuest(6,602,"&6Holy Quest","deliever",5,"demon cores",50,10)
 
 	else if {_random6} = 3:
-		setQuest(6,503,"&6Cursed Quest","deliever",5,"angle cores",50,10)
+		setQuest(6,603,"&6Cursed Quest","deliever",5,"angle cores",50,10)
 
 #Quest Events
 
