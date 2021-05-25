@@ -1,17 +1,18 @@
 #Jobs Script
-#Version: 1.0
+#Version: 1.2
 #Author: Warpedtimes (https://github.com/Warpedtimes/Skript)
 
 #Tested versions: 1.16
 #Skript ver: 2.5.3
 #Addons: skript-gui (https://github.com/APickledWalrus/skript-gui)
-#		 skellet (https://forums.skunity.com/resources/skellett.24/)
-#		 SkBee (https://github.com/ShaneBeee/SkBee/)
+#	 skellet (https://forums.skunity.com/resources/skellett.24/)
+#	 SkBee (https://github.com/ShaneBeee/SkBee/)
 #Requirements: Economy plugin (e.g. Vault)
 
 options:
 	#Display Prefix in chat
 	prefix: &f[&aJOBS&f]
+	prefixadmin: &f[&aJOBS&cADMIN&f]
 
 	#Payrise per each level. This is 3%.
 	levelBonus: 0.03
@@ -117,6 +118,109 @@ command jobs [<text>] [<text>]:
 		#Else just open the jobs menu for the player
 		else:
 			jobsMenu(player)
+		
+
+#Admin Commands (Permission required: "Jobs.admin")
+command jadmin <text> <offline player> <text> [<integer>]:
+	permission: jobs.admin
+	aliases: jobsadmin, ja
+	trigger:
+		set {_p} to arg-2
+		#Checks if the supplied job is valid
+		if arg-1 contains "max":
+			if arg-3 is set:
+				set {_num} to arg-3 parsed as a number
+				if {_num} > -1:
+					if {_num} <= size of {jobs.list::*}:
+						set {jobs.%{_p}%.max} to {_num}
+						message "{@prefixadmin} &e%{_p}% &amax jobs amount has been set to &e%{_num}%"
+					else:
+						message "{@prefixadmin} &cYou cannot set the max jobs value to be higher than then the amount of existing jobs"
+
+				else:
+					message "{@prefixadmin} &cYou cannot set the max jobs value below 0!."
+			else:
+				message "{@prefixadmin} &cPlease specify a new max jobs number to set the player too."
+		else if {jobs.list::*} contains {_job}:
+			set {_job} to arg-3
+			if arg-1 contains "fire":
+				#Checks if the target player is online. If so removes them from the job. If not they are added to a list to be removed.
+				if {_p} is online:
+					if {jobs.is%{_job}%.%{_p}%} is true:
+						message "{@prefixadmin} &aPlayer is online. Firing &e%{_p}%&a from job &e%{_job}%"
+						jobsLeave({_p},{_job})
+					else:
+						message "{@prefixadmin} &cPlayer is not a &e%{_job}%&c. Unable to fire"
+				else:
+					if {jobs.is%{_job}%.%{_p}%} is true:
+						if {jobs.toBeFired.%{_job}%.%{_p}%} is not true:
+							message "{@prefixadmin} &cPlayer is offline. &e%{_p}%&c has been added to the remove list. On their next join they shall be fired."
+							set {jobs.toBeFired.%{_job}%.%{_p}%} to true
+						else:
+							message "{@prefixadmin} &cPlayer is already on the firing list for &e%{_job}%&c. Unable to add again"
+					else:
+						message "{@prefixadmin} &cPlayer is not a &e%{_job}%&c. Unable to add to firing list"
+
+			else if arg-1 contains "Hire":
+				#Checks if the target player is online. If so adds them to the job. If not they are added to a list to be hired.
+				if {jobs.amount.%{_p}%} < {jobs.%{_p}%.max}:
+					if {jobs.tempJobsAmount.%{_p}%} is not set:
+						set {jobs.tempJobsAmount.%{_p}%} to 0
+					if {jobs.tempJobsAmount.%{_p}%} < {jobs.%{_p}%.max}:
+						if {_p} is online:
+							if {jobs.is%{_job}%.%{_p}%} is not true:
+								message "{@prefixadmin} &aPlayer is online. Hiring &e%{_p}%&a for job &e%{_job}%"
+								jobsJoin({_p},{_job})
+							else:
+								message "{@prefixadmin} &cPlayer is already a &e%{_job}%&c. Unable to hire"
+						else:
+							if {jobs.is%{_job}%.%{_p}%} is not true:
+								if {jobs.toBeHired.%{_job}%.%{_p}%} is not true:
+									message "{@prefixadmin} &cPlayer is offline. &e%{_p}%&c has been added to the hiring list. On their next join they shall be hired."
+									set {jobs.toBeHired.%{_job}%.%{_p}%} to true
+									add 1 to {jobs.tempJobsAmount.%{_p}%}
+								else:
+									message "{@prefixadmin} &cPlayer is already on the hiring list for &e%{_job}%&c. Unable to add again"
+							else:
+								message "{@prefixadmin} &cPlayer is already a &e%{_job}%&c. Unable to add to hiring list"
+					else:
+						message "{@prefixadmin} &cPlayer is already waiting on jobs. Adding them to this job will exceed their limit"
+				else:
+					message "{@prefixadmin} &cPlayer already has the max jobs they are allowed &7(%{jobs.amount.%{_p}%}%&7)"
+
+
+			else if arg-1 contains "level":
+				if arg-4 >= 1:
+					if arg-4 <= {@maxLevel}:
+						message "{@prefixadmin} &e%{_p}% &ahas been set to &e%{_job}% &elevel %arg-4%"
+						set {jobs.level.%{_job}%.%{_p}%} to arg-4
+					else:
+						message "{@prefixadmin} &cCannot set a player above max level &7({@maxLevel}) &cUnable to change level"
+				else:
+					message "{@prefixadmin} &cCannot set a player below min level &7(1) &cUnable to change level"
+		else:
+			message "{@prefixadmin} &c%{_job}%&c is not a valid job!"
+
+
+
+#On join checks the lists to see if someone needs to be fired or hired if they were offline.
+on join:
+	wait 1 second
+	loop {jobs.list::*}:
+		wait 1 tick
+		set {_job} to loop-value
+		if {jobs.toBeFired.%{_job}%.%player%} is true:
+			jobsLeave(player,{_job})
+			set {jobs.toBeFired.%{_job}%.%player%} to false
+			remove 1 from {jobs.tempJobsAmount.%player%}
+
+	loop {jobs.list::*}:
+		wait 1 tick
+		set {_job} to loop-value
+		if {jobs.toBeHired.%{_job}%.%player%} is true:
+			jobsJoin(player,{_job})
+			set {jobs.toBeHired.%{_job}%.%player%} to false
+
 
 #How the skript handles players joining a job
 function jobsJoin(p: player, job: text):
@@ -142,7 +246,7 @@ function jobsLeave(p: player, job: text):
 		remove 1 from {jobs.amount.%{_p}%}
 		set {jobs.is%{_job}%.%{_p}%} to false
 		#Removes the set amount of XP from the job
-		if {jobs.level.%{_job}%.%{_p}%} <= 1:
+		if {jobs.level.%{_job}%.%{_p}%} >= 1:
 			set {_keptXP} to (({jobs.level.%{_job}%.%{_p}%} * 5000) + {jobs.xp.%{_job}%.%{_p}%}) * {@keepXP}
 			set {_keptLVL} to {_keptXP} / 5000
 			set {jobs.level.%{_job}%.%{_p}%} to floor({_keptLVL})
@@ -503,6 +607,4 @@ on join:
 
 on load:
 	set {jobs.list::*} to "miner" and "farmer" and "hunter" and "lumberjack" and "excavator" and "enchanter"
-
-
 
