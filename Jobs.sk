@@ -1,12 +1,12 @@
 #Jobs Script
-#Version: 1.2
+#Version: 1.0
 #Author: Warpedtimes (https://github.com/Warpedtimes/Skript)
 
 #Tested versions: 1.16
 #Skript ver: 2.5.3
 #Addons: skript-gui (https://github.com/APickledWalrus/skript-gui)
-#	 skellet (https://forums.skunity.com/resources/skellett.24/)
-#	 SkBee (https://github.com/ShaneBeee/SkBee/)
+#		 skellet (https://forums.skunity.com/resources/skellett.24/)
+#		 SkBee (https://github.com/ShaneBeee/SkBee/)
 #Requirements: Economy plugin (e.g. Vault)
 
 options:
@@ -141,7 +141,7 @@ command jadmin <text> <offline player> <text> [<integer>]:
 					message "{@prefixadmin} &cYou cannot set the max jobs value below 0!."
 			else:
 				message "{@prefixadmin} &cPlease specify a new max jobs number to set the player too."
-		else if {jobs.list::*} contains {_job}:
+		else if {jobs.list::*} contains arg-3:
 			set {_job} to arg-3
 			if arg-1 contains "fire":
 				#Checks if the target player is online. If so removes them from the job. If not they are added to a list to be removed.
