@@ -1,0 +1,14 @@
+
+options:
+	#How you want the mentioned named to be displayed. Default is just coloured yellow
+	style: &e
+
+	# Refer to here as to how to correctly select (https://gist.github.com/Andre601/1ab3b4fabd0010ae241156333491c379)
+	sound: "ENTITY_ARROW_HIT_PLAYER"
+
+on chat:
+	loop all players:
+		if message contains "%loop-value%":
+			replace "%loop-value%" with "{@style}%loop-value%&r" in message
+			set {_player} to "%loop-value%" parsed as player
+			play sound {@sound} with volume 0.5 with pitch 1 at {_player} for {_player}
