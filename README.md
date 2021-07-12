@@ -7,10 +7,8 @@ CF.sk:
 Jobs.sk: 
 - A jobs script for your minecraft server! Includes 6 Jobs (Miner, Farmer, Hunter, Lumberjack, Excavator and Enchanter!) Players will be paid money for each action they do
 
-Quests.sk (WIP):
-- A script for providing repeatable daily and weekly quests for players to complete! 
-- Daily Quests are working and function. Now to expand to have weekly quests
-- TODO: 
-  - Incorporate custom mobs into a more connected approach
-  - Look into UNIX time for handling the time instead of using %now%
-  - Code Cleanup
+Mentions.sk
+ - Skript for highlighing mentioned players in chat.
+
+AntiBuild
+ - Toggle building. Useful for playing around as OP and not wanting to break blocks.
