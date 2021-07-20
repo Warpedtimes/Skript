@@ -1,5 +1,6 @@
 # Skript 
-Contains custom scripts I have written.
+Contains custom scripts I have written and released.
+Most of them are pretty bad and could do with a rewrite (sheeeesh)
 
 CF.sk: 
 - A simple script for having coinflips between players
