@@ -1,0 +1,22 @@
+# ProximityChat.sk
+# Author: Warpedtimes (https://github.com/Warpedtimes/Skript)
+# Discord: Warpedtimes#9475
+# Skript-ver: 2.6-beta2
+# Tested mc-ver: 1.17
+
+
+# Proximity based chat. You can only hear a player if they are within set proximity
+# Excluding players who have permission "chat.unlimited"
+
+options:
+	proximity: 15
+	prefix: &f[&9Local&f]
+
+on chat:
+	cancel event
+	loop all players:
+		if distance between player and loop-player is less than {@proximity} or player has permission "chat.unlimited":
+			send "{@prefix} %player%&8: &f%message%" to loop-player
+
+
+
