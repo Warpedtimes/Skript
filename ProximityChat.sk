@@ -14,6 +14,11 @@ options:
 
 on chat:
 	cancel event
-	loop all players:
-		if distance between player and loop-player is less than {@proximity} or player has permission "chat.unlimited":
-			send "{@prefix} %player%&8: &f%message%" to loop-player
+	if player has permission "chat.unlimited":
+		broadcast "{@prefix} %player%&8: &f%message%"
+	else:
+		loop all players:
+			if distance between player and loop-player is less than {@proximity}:
+				send "{@prefix} %player%&8: &f%message%" to loop-player
+			else if loop-player has permission "chat.unlimited":
+				send "{@prefix} %player%&8: &f%message%" to loop-player
