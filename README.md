@@ -2,6 +2,9 @@
 Contains custom scripts I have written and released.
 Most of them are pretty bad and could do with a rewrite (sheeeesh)
 
+Bouncepads.sk
+ - Configurable Bouncepads
+
 ProximityChat.sk
  - Proximity text chat for minecraft using skript
 
