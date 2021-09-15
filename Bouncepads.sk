@@ -1,0 +1,173 @@
+#!██████   ██████  ██    ██ ███    ██  ██████ ███████     ██████   █████  ██████  ███████ 
+#!██   ██ ██    ██ ██    ██ ████   ██ ██      ██          ██   ██ ██   ██ ██   ██ ██      
+#!██████  ██    ██ ██    ██ ██ ██  ██ ██      █████       ██████  ███████ ██   ██ ███████ 
+#!██   ██ ██    ██ ██    ██ ██  ██ ██ ██      ██          ██      ██   ██ ██   ██      ██ 
+#!██████   ██████   ██████  ██   ████  ██████ ███████     ██      ██   ██ ██████  ███████ 
+#
+# Tested Game Version: 1.17.1
+# Script Version: 1.0
+# Author: Warpedtimes#9475
+#
+# Requirements:
+# - Skellet (https://github.com/TheLimeGlass/Skellett/releases)
+
+options:
+
+	# Admin permissions will allow the user to get a bouncepad using the command
+	adminPermission: bouncepads.admin
+	# Use Permission will allow the player to use the bouncepads
+	usePermission: bouncepads.use
+	
+	# Default force of the bounce pads
+	horizontalForce: 1
+	verticleForce: 1
+
+
+# ========== MAIN COMMAND ========== #
+command bouncepad [<number>] [<player>]:
+	permission: {@adminPermission}
+	permission message: "&c[&aBouncepads&c] &7Sorry you don't have permission to use this command."
+	trigger:
+		# Determine the amount of bouncepads to be given
+		set {_amount} to 1
+		if arg-1 is set:
+			set {_amount} to arg-1
+
+		# Determine who will be reciving the bouncepad
+		set {_receiver} to sender
+		if arg-2 is set:
+			set {_receiver} to arg-2
+
+		give shiny slime block named "&aBounce Pad" with lore "&7[Left-Click] &8while held to" and "&8toggle between directions." and "" and "&7[Shift-Left-Click] &8while" and "&8held to edit pushing force." to {_receiver}
+		play sound "entity.item.pickup" at {_receiver} for {_receiver}
+
+		# Send message to receiver
+		send "&c[&aBouncepads&c] &7You have received &a%{_amount}% &aBouncepad(s)!" to {_receiver}
+		if {_receiver} != sender:
+			send "&c[&aBouncepads&c] &7You have given &e%{_reciever}% &a%{_amount}% &aBouncepad(s)!" to sender
+
+
+# ========== Bouncing ========== #
+# Simply use the variables from the location of the event-block
+# to push the player up and in the directions with the force
+on walk on slime block:
+	if player has permission "{@usePermission}":
+		play sound "entity.bat.takeoff" at player for player
+		set player's velocity to vector 0, 0, 0
+		push player upwards at speed {bouncepads.verticle::%location of event-block%}
+		push player {bouncepads.directions::%player's uuid%} at speed {bouncepads.horizontal::%location of event-block%}
+
+# ========== Toggling Options ========== #
+on left click with slime block:
+	# Wait 1 tick and check if break is true as we don't want to toggle
+	# at the same time as breaking a block.
+	wait 1 tick
+	if {bouncepads.break::%player's uuid%} is not true:
+		if name of held item is "&aBounce Pad":
+			if player has permission "{@adminPermission}":
+				# Check for sneaking as we have a Left Click and a Shift Left Click 
+				if player is sneaking:
+					if {bouncepads.awaitingInput::%player's uuid%} is not true:
+						# While awaitingInput is true the player's chat messages will be intercepted
+						set {bouncepads.awaitingInput::%player's uuid%} to true
+						# If the player doesn't have a default already set then set it to the default
+						if {bouncepads.horizontal::%player's uuid%} is not set:
+							set {bouncepads.horizontal::%player's uuid%} to {@horizontalForce}
+						if {bouncepads.verticle::%player's uuid%} is not set:
+							set {bouncepads.verticle::%player's uuid%} to {@verticleForce}
+						# Query the user for the horizontal force
+						send "&7Please input &aHorizontal &7force. &fCurrent: %{bouncepads.horizontal::%player's uuid%}% &8Default: {@horizontalForce} &cEnter ""cancel"" to cancel"
+						# This continues in the on chat event as we only need to initiate the conditions for it to then be 
+						# handled in an on chat event
+
+				# Changing the direction, simply just moving between the 4
+				else:
+					set {_dir} to {bouncepads.directions::%player's uuid%}
+					if {_dir} is not set:
+						set {_dir} to north
+					if {_dir} is north:
+						set {_dir} to east
+					else if {_dir} is east:
+						set {_dir} to south
+					else if {_dir} is south:
+						set {_dir} to west
+					else if {_dir} is west:
+						set {_dir} to north
+
+					set {bouncepads.directions::%player's uuid%} to {_dir}
+					send "&c[&aBouncepads&c] &7Direction: &a%{_dir}%"
+					play sound "entity.illusioner.mirror_move" at player for player
+
+# ========== Toggling Options - Forces Continuted ========== #
+# The on chat event will take the chat message while awaitingInput is true
+# If the message is a number then it will continue with setting the forces
+# Otherwise if it is "cancel" then immediately cancel and set awaitingInput to false
+on chat:
+	if {bouncepads.awaitingInput::%player's uuid%} is true:
+		# Default to horizontal as that is the first question asked
+		if {bouncepads.awaitingInputFor} is not set:
+			set {bouncepads.awaitingInputFor} to "horizontal"
+		cancel event
+		set {_input} to message
+		if {_input} is set:
+			# If the user wants to cancel the event then we will
+			if {_input} contains "cancel":
+				set {bouncepads.awaitingInput::%player's uuid%} to false
+				send "&c[&aBouncepads&c] &7Force Editing Cancelled"
+
+			# Since its not cancel we need to check if it is a number
+			else if ("%{_input}%" parsed as a number) is a number:
+				set {_n} to ("%{_input}%" parsed as a number)
+				# Now we can determine what the awaitingInputFor is and following through with setting the forces
+				if {bouncepads.awaitingInputFor} contains "horizontal":
+					set {bouncepads.horizontal::%player's uuid%} to {_n}
+					set {bouncepads.awaitingInputFor} to "verticle"
+					send "&7Please input &aVerticle &7force. &fCurrent: %{bouncepads.verticle::%player's uuid%}% &8Default: {@verticleForce} &cEnter ""cancel"" to cancel"
+				else:
+					set {bouncepads.verticle::%player's uuid%} to {_n}
+					set {bouncepads.awaitingInputFor} to "horizontal"
+					set {bouncepads.awaitingInput::%player's uuid%} to false
+					send "&c[&aBouncepads&c] &7Force Inputs Accepted!"
+					send "&7Horizontal: &a%{bouncepads.horizontal::%player's uuid%}%"
+					send "&7Verticle: &a%{bouncepads.verticle::%player's uuid%}%"
+
+			# Since it wasn't cancel or a number then just tell the user it wasnt and ask them to input correctly
+			else:
+				send "&c[&aBouncepads&c] &7Please enter a number or ""cancel"" to cancel!"
+
+# ========== Placing ========== #
+# We simply set the direction and forces of the player placing the block
+# to the bouncepad just placed. Since it is set as the location of the event-block we can
+# have multiple pads with multiple speeds and directions placed
+on place of slime block:
+	if name of held item is "&aBounce Pad":
+		set {bouncepads.directions::%location of event-block%} to {bouncepads.directions::%player's uuid%}
+		set {bouncepads.horizontal::%location of event-block%} to {bouncepads.horizontal::%player's uuid%}
+		set {bouncepads.verticle::%location of event-block%} to {bouncepads.verticle::%player's uuid%}
+		send "&c[&aBouncepads&c] &7Bouncepad placed!:"
+		send "&7Direction: &a%{bouncepads.directions::%location of event-block%}%"
+		send "&7Horizontal: &a%{bouncepads.horizontal::%location of event-block%}%"
+		send "&7Verticle: &a%{bouncepads.verticle::%location of event-block%}%"
+		play sound "entity.bat.takeoff" at player for player
+
+# ========== Breaking ========== #
+# Delete all the saved data for the bouncepad at the location
+on break of slime block:
+	# Only an actual bouncepad would meet this condition since we are using
+	# an on break for ALL slime blocks
+	if {bouncepads.directions::%location of event-block%} is set:
+		send "&c[&aBouncepads&c] &7You just broke a bouncepad!"
+		delete {bouncepads.directions::%location of event-block%}
+		delete {bouncepads.horizontal::%location of event-block%}
+		delete {bouncepads.verticle::%location of event-block%}
+
+# Since we are using Left Click event for toggling options
+# We need to be able to not trigger the toggling of options
+# If we are also breaking a block, 1 because that block might be a bounce pad
+# and 2 because its annoying for it to change direction if you're just 
+# trying to break a block in say, creative mode
+on break:
+	if name of held item is "&aBounce Pad":
+		set {bouncepads.break::%player's uuid%} to true
+		wait 1 tick
+		set {bouncepads.break::%player's uuid%} to false
