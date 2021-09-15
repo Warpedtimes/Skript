@@ -38,7 +38,7 @@ command bouncepad [<number>] [<player>]:
 		if arg-2 is set:
 			set {_receiver} to arg-2
 
-		give shiny slime block named "&aBounce Pad" with lore "&7[Left-Click] &8while held to" and "&8toggle between directions." and "" and "&7[Shift-Left-Click] &8while" and "&8held to edit pushing force." to {_receiver}
+		give {_amount} of shiny slime block named "&aBounce Pad" with lore "&7[Left-Click] &8while held to" and "&8toggle between directions." and "" and "&7[Shift-Left-Click] &8while" and "&8held to edit pushing force." to {_receiver}
 		play sound "entity.item.pickup" at {_receiver} for {_receiver}
 
 		# Send message to receiver
