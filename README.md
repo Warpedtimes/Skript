@@ -2,6 +2,9 @@
 Contains custom scripts I have written and released.
 Most of them are pretty bad and could do with a rewrite (sheeeesh)
 
+Pouches.sk
+ - Allows players have pouches to store items!
+
 Bouncepads.sk
  - Configurable Bouncepads
 
