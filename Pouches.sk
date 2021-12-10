@@ -1,6 +1,6 @@
 # Pouches Skript
 # Author Warpedtimes#9475
-# Minecraft 1.17
+# Minecraft 1.18
 # Skript 2.6
 # Dependencies:
 # 	- Skript (https://github.com/SkriptLang/Skript/releases)
@@ -101,7 +101,7 @@ function openPouch(p: player, id: string, tier: number):
 # Checks to make sure players cannot put another pouch inside of another pouch.
 on inventory click:
 	if inventory name of player's current inventory contains "Pouch":
-		if "%inventory action%" = "swap with hotbar":
+		if "%inventory action%" = "swap with hotbar" or "hotbar move and readd":
 			set {_item} to event.getWhoClicked().getInventory().getItem(event.getHotbarButton())
 			set {_data} to nbt of {_item}
 			set {_id} to tag "PouchID" of {_data}
@@ -109,31 +109,21 @@ on inventory click:
 				cancel event
 				send "&cYou cannot do this!"
 
-		else if clicked item is a player head:
-			set {_data} to nbt of clicked item
+		else if event-slot is player head:
+			set {_data} to nbt of event-slot
 			set {_id} to tag "PouchID" of {_data}
 			if {_id} is set:
 				cancel event
-				send "&cYou cannot do this!"
+				send "&2You cannot do this!"
 
 # Stops the player from placing down the pouch
 on block place:
 	if held item is a player head:
 		set {_data} to nbt of held item
 
-	else if offhand item is a player head:
+	else if offhand item is (player head):
 		set {_data} to nbt of offhand item
 
 	set {_id} to tag "PouchID" of {_data}
 	if {_id} is set:
 		cancel event
-
-
-
-
-
-
-
-
-
-
