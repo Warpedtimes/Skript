@@ -54,9 +54,10 @@ function givePouch(p: player, tier: integer):
 # Take the event of the player trying to open the pouch, find the ID and tier of the pouch so that the pouch can then be opened to the player
 on right click with player head:
 	set {_data} to nbt of held item
-	set {_id} to tag "PouchID" of {_data}
-	set {_tier} to tag "PouchTier" of {_data}
-	openPouch(player,{_id},{_tier})
+	if {_data} is set:
+		set {_id} to tag "PouchID" of {_data}
+		set {_tier} to tag "PouchTier" of {_data}
+		openPouch(player,{_id},{_tier})
 
 # You shouldn't need to call this method unless you know what you are doing.
 function openPouch(p: player, id: string, tier: number):
@@ -102,7 +103,9 @@ function openPouch(p: player, id: string, tier: number):
 on inventory click:
 	if inventory name of player's current inventory contains "Pouch":
 		if "%inventory action%" = "swap with hotbar" or "hotbar move and readd":
-			set {_item} to event.getWhoClicked().getInventory().getItem(event.getHotbarButton())
+			set {_item} to player.getInventory().getItem(event.getHotbarButton())
+			if {_item} is not set:
+				set {_item} to player.getInventory().getItemInOffHand()
 			set {_data} to nbt of {_item}
 			set {_id} to tag "PouchID" of {_data}
 			if {_id} is set:
@@ -127,3 +130,12 @@ on block place:
 	set {_id} to tag "PouchID" of {_data}
 	if {_id} is set:
 		cancel event
+
+
+
+
+
+
+
+
+
