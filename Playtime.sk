@@ -1,0 +1,62 @@
+# Playtime Script
+# Version: 1.0
+# Author: Warpedtimes (https://github.com/Warpedtimes/Skript)
+
+# Tested versions: 1.18.*
+# Skript ver: 2.6.1
+# Addons: 
+#   skript-reflect (https://forums.skunity.com/resources/skript-reflect.1146/)
+
+
+options:
+    prefix: &7(&3Playtime&7)
+
+
+command playtime [<player>]:
+	aliases: pt
+	trigger:
+        if arg-1 is set:
+            set {_player} to arg-1
+        else:
+            set {_player} to player
+		play sound "block.metal_pressure_plate.click_off" at player for player
+        # Dont change the math
+		set {_secs} to (time played of {_player}).getTicks()/20
+		set {_days} to floor({_secs} / 86400)
+		set {_hours} to floor(mod({_secs}, 86400) / 3600)
+		set {_mins} to floor(mod({_secs}, 3600) / 60)
+		set {_secs} to floor(mod({_secs}, 60))
+		set {_time} to ""
+		
+        # All of these statements are for formatting the time nicely
+		# Dont change unless you know what you are doing
+		if {_days} > 0:
+			set {_time} to "%{_days}% days"
+		
+		if {_hours} > 0:
+			if {_days} > 0:
+				set {_time} to "%{_time}%, %{_hours}% hours"
+			else:
+				set {_time} to "%{_hours}% hours"
+		
+		if {_mins} > 0:
+			if {_hours} > 0:
+				set {_time} to "%{_time}%, %{_mins}% minutes"
+			else if {_days} > 0:
+				set {_time} to "%{_time}%, %{_mins}% minutes"
+			else:
+				set {_time} to "%{_mins}% minutes"
+
+		if {_secs} > 0:
+			if {_mins} > 0:
+				set {_time} to "%{_time}% and %{_secs}% seconds"
+			else if {_hours} > 0:
+				set {_time} to "%{_time}% and %{_secs}% seconds"
+			else if {_days} > 0:
+				set {_time} to "%{_time}% and %{_secs}% seconds"
+			else:
+				set {_time} to "%{_secs}% seconds"
+
+        # You can edit the print message however you like
+		send "&6{@prefix} &7• &7You have played for &a%{_time}%" to player
+
