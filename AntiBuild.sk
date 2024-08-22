@@ -1,6 +1,6 @@
 # Anti Building Skript
-# Skript-ver: 2.6-beta2
-# Tested mc-ver: 1.17
+# Skript-ver: 2.9
+# Tested mc-ver: 1.21
 # Author: Warpedtimes (https://github.com/Warpedtimes/)
 
 # False = Building allowed
@@ -17,17 +17,17 @@ on break:
 	if {antiBuild.%player's uuid%} is true:
 		cancel event
 		if player has permission "build.allow":
-			message "{@errorPrefix} &7You cannot build here. Use &c/build&7 to enable building mode."
+			send "{@errorPrefix} &7You cannot build here. Use &c/build&7 to enable building mode."
 		else:
-			message "{@errorPrefix} &7You cannot build here."
+			send "{@errorPrefix} &7You cannot build here."
 
 on place:
 	if {antiBuild.%player's uuid%} is true:
 		cancel event
 		if player has permission "build.allow":
-			message "{@errorPrefix} &7You cannot build here. Use &c/build&7 to enable building mode."
+			send "{@errorPrefix} &7You cannot build here. Use &c/build&7 to enable building mode."
 		else:
-			message "{@errorPrefix} &7You cannot build here."
+			send "{@errorPrefix} &7You cannot build here."
 
 command build:
 	permission: build.allow
@@ -35,10 +35,10 @@ command build:
 	trigger:
 		if {antiBuild.%player's uuid%} is true:
 			set {antiBuild.%player's uuid%} to false
-			message "{@antiBuildPrefix} &7Building &2&lenabled. &7Use &c/build&7 to disable again."
+			send "{@antiBuildPrefix} &7Building &2&lenabled. &7Use &c/build&7 to disable again."
 		else:
 			set {antiBuild.%player's uuid%} to true
-			message "{@antiBuildPrefix} &7Building &c&ldisabled. &7Use &c/build&7 to enable again."
+			send "{@antiBuildPrefix} &7Building &c&ldisabled. &7Use &c/build&7 to enable again."
 
 on join:
 	if {antiBuild.%player's uuid%} is not set:
@@ -46,4 +46,4 @@ on join:
 	if {antiBuild.%player's uuid%} is false:
 		set {antiBuild.%player's uuid%} to true
 		wait 3 seconds
-		message "{@antiBuildPrefix} &7Building &c&ldisabled. &7Use &c/build&7 to enable again."
+		send "{@antiBuildPrefix} &7Building &c&ldisabled. &7Use &c/build&7 to enable again."
