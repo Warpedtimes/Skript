@@ -1,8 +1,8 @@
 #! ProximityChat.sk
 #! Author: Warpedtimes (https://github.com/Warpedtimes/Skript)
 #! Discord: Warpedtimes#9475
-#! Skript-ver: 2.6-beta2
-#! Tested mc-ver: 1.17
+#! Skript-ver: 2.9
+#! Tested mc-ver: 1.21
 
 
 #! Proximity based chat. You can only hear a player if they are within set proximity
